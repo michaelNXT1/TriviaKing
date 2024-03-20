@@ -1,37 +1,30 @@
 import socket
+import threading
+from dev.config import client_constants, general, client_op_codes
 
 
-def get_input_from_keyboard(prompt="Enter input: "):
-    """
-    Function to get input from the keyboard.
-
-    Args:
-    - prompt (str): Optional. Prompt to display to the user. Defaults to "Enter input: ".
-
-    Returns:
-    - str: User input from the keyboard.
-    """
-    user_input = input(prompt)
-    return user_input
+def send_message(recipient_socket, message, op_code=0x00):
+    recipient_socket.sendall(op_code.to_bytes(1, byteorder='big') + bytes(message, 'utf-8'))
 
 
 def receive_offer_broadcast():
     # Create UDP socket
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp_socket.bind(('0.0.0.0', 13117))
+    udp_socket.bind(('0.0.0.0', client_constants['server_port']))
 
     # Receive UDP broadcast
-    data, addr = udp_socket.recvfrom(1024)
+    data, addr = udp_socket.recvfrom(general['buffer_size'])
 
     # Parse received data
-    magic_cookie = data[:4]
-    message_type = data[4:5]
+    magic_cookie = int.from_bytes(data[:4])
+    message_type = int.from_bytes(data[4:5])
     server_name = data[5:37].decode('utf-8').strip()
     server_port = int.from_bytes(data[37:39], byteorder='big')
 
     # Check if the received message is an offer
-    if magic_cookie == b'\xab\xcd\xdc\xba' and message_type == b'\x02':
+    if magic_cookie == client_constants['magic_cookie'] and message_type == client_constants['message_type']:
         print(f'Received offer from server “{server_name}” at address {addr[0]}, attempting to connect...')
+        user_name = input("Please enter your name: ")
 
         # Establish TCP connection
         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -39,16 +32,16 @@ def receive_offer_broadcast():
 
         try:
             # Send success message over TCP
-            tcp_socket.sendall(b"success")
-
+            send_message(tcp_socket, user_name, client_op_codes['client_sends_name'])
 
             # Continuously prompt user for input until "QUIT" is entered
             while True:
                 # Receive response from server
                 response = tcp_socket.recv(1024)
                 print("Server response:", response.decode())
-                user_input = get_input_from_keyboard("Enter your input (or 'QUIT' to exit): ")
-                tcp_socket.sendall(user_input.encode())
+                user_input = input("Enter your input (or 'QUIT' to exit): ")
+                send_message(tcp_socket, user_input)
+                # tcp_socket.sendall(user_input.encode())
 
                 if user_input.upper() == "QUIT":
                     break
