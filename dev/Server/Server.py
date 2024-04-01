@@ -53,12 +53,12 @@ def handle_tcp_connection(connection, client_address):
     except Exception as e:
         print(f"Error occurred with connection from {client_address}: {e}")
 
-    finally:
-        # Remove connection from the list of active connections
-        del active_connections[(connection, client_address)]
-        # Clean up the connection
-        connection.close()
-        print("Connection closed with:", client_address)
+    # finally:
+    #     # Remove connection from the list of active connections
+    #     del active_connections[(connection, client_address)]
+    #     # Clean up the connection
+    #     connection.close()
+    #     print("Connection closed with:", client_address)
 
 
 def monitor_connections():
@@ -90,12 +90,7 @@ def wait_for_clients():
         tcp_socket.settimeout(10)
         try:
             connection, client_address = tcp_socket.accept()  # Accept incoming connection
-            print("Connection accepted from:", client_address)
-            active_connections[(connection, client_address)] = ''  # Add connection to the list of active connections
-            data = connection.recv(1024)
-            content = data[1:].decode()
-            active_connections[(connection, client_address)] = content
-            connection.sendall(b"Your name has been submitted!")
+            handle_tcp_connection(connection, client_address)
             last_join_time = time.time()
         except socket.timeout:
             break
@@ -105,8 +100,10 @@ def wait_for_clients():
 
 def run_game():
     send_tcp_message(game_welcome_message(server_name, QandA.subject), server_op_codes['server_sends_message'])
-    from random import random
-    for question in random.shuffle(list(QandA.questions_and_answers.keys())):
+    import random
+    qa_list = list(QandA.questions_and_answers.keys())
+    random.shuffle(qa_list)
+    for question in qa_list:
         answer = QandA.questions_and_answers[question]
         send_tcp_message(question, server_op_codes['server_requests_input'])
 
