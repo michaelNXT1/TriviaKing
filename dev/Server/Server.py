@@ -2,23 +2,27 @@ import socket
 import threading
 import time
 
-active_connections = {}  # List to store active connections
+from dev import QandA
+from dev.Server.Player import Player
+from dev.config import server_op_codes, game_welcome_message, server_consts
+
+active_connections = []  # List to store active connections
 stop_udp_broadcast = False
+server_name = "TeamMysticServer"
 
 
 def send_offer_broadcast():
     # Define server name and port
-    server_name = "TeamMysticServer"
     server_port = 12345  # Example port, replace with your desired port
 
     # Ensure server name is 32 characters long
-    server_name = server_name.ljust(32)
+    server_name_32 = server_name.ljust(32)
 
     # Construct packet
-    magic_cookie = b'\xab\xcd\xdc\xba'
-    message_type = b'\x02'
-    server_name_bytes = server_name.encode('utf-8')
-    server_port_bytes = server_port.to_bytes(2, byteorder='big')
+    magic_cookie = server_consts['magic_cookie'].to_bytes(4)
+    message_type = server_consts['message_type'].to_bytes(1)
+    server_name_bytes = server_name_32.encode('utf-8')
+    server_port_bytes = server_port.to_bytes(2)
 
     packet = magic_cookie + message_type + server_name_bytes + server_port_bytes
 
@@ -32,29 +36,19 @@ def send_offer_broadcast():
     udp_socket.close()
 
 
+def send_tcp_message(msg, op_code):
+    print(msg)
+    for p in active_connections:
+        p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
+
+
 def handle_tcp_connection(connection, client_address):
     try:
         print("Connection accepted from:", client_address)
-        active_connections[(connection, client_address)] = ''  # Add connection to the list of active connections
-
-        while True:
-            # Receive data from client
-            data = connection.recv(1024)
-            if not data:
-                break  # Break if no more data is received
-            op_code = int.from_bytes(data[:1])
-            content = data[1:].decode()
-
-            if op_code == 0x00:
-                active_connections[(connection, client_address)] = content
-                connection.sendall(b"Your name has been submitted!")
-            else:
-                print(f"Received from {client_address}: {content}")
-                connection.sendall(b"Thank you for the message!")
-
-            # Check if client wants to quit
-            if content.strip().upper() == "QUIT":
-                break
+        data = connection.recv(1024)
+        content = data[1:].decode()
+        active_connections.append(Player(connection, client_address, content))
+        connection.sendall(b"Your name has been submitted!")
 
     except Exception as e:
         print(f"Error occurred with connection from {client_address}: {e}")
@@ -109,8 +103,17 @@ def wait_for_clients():
     stop_udp_broadcast = True
 
 
+def run_game():
+    send_tcp_message(game_welcome_message(server_name, QandA.subject), server_op_codes['server_sends_message'])
+    from random import random
+    for question in random.shuffle(list(QandA.questions_and_answers.keys())):
+        answer = QandA.questions_and_answers[question]
+        send_tcp_message(question, server_op_codes['server_requests_input'])
+
+
 def main():
     wait_for_clients()
+    run_game()
 
 
 if __name__ == "__main__":
