@@ -1,3 +1,5 @@
+subject = "General questions"
+
 questions_and_answers = {
     "A dog sweats by panting its tongue.": False,
     "A monkey was the first non-human to go into space.": False,
