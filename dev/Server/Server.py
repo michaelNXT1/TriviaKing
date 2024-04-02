@@ -4,11 +4,14 @@ import time
 
 from dev import QandA
 from dev.Server.Player import Player
-from dev.config import server_op_codes, game_welcome_message, server_consts
+from dev.config import server_op_codes, game_welcome_message, server_consts, \
+     player_lost, next_round
 
 active_connections = []  # List to store active connections
+client_threads = []  # List to store each client's thread
 stop_udp_broadcast = False
 server_name = "TeamMysticServer"
+disqualified_players = [];
 
 
 def send_offer_broadcast():
@@ -68,6 +71,11 @@ def monitor_connections():
         # Sleep for 5 seconds before checking again
         time.sleep(5)
 
+def get_player_name(connection_address):
+    for p in active_connections:
+        if p.connection_address == connection_address:
+            return p.name
+        return None
 
 def start_thread(target, is_daemon):
     thread = threading.Thread(target=target)
@@ -97,15 +105,72 @@ def wait_for_clients():
     global stop_udp_broadcast
     stop_udp_broadcast = True
 
-
 def run_game():
+    disqualified_players = []
+    round_number = 0
     send_tcp_message(game_welcome_message(server_name, QandA.subject), server_op_codes['server_sends_message'])
     import random
     qa_list = list(QandA.questions_and_answers.keys())
     random.shuffle(qa_list)
-    for question in qa_list:
-        answer = QandA.questions_and_answers[question]
-        send_tcp_message(question, server_op_codes['server_requests_input'])
+    while len (active_connections) > 1:
+        for question in qa_list:
+            answer = QandA.questions_and_answers[question]
+            send_tcp_message(question, server_op_codes['server_requests_input'])
+            for p in active_connections:
+                    client_thread = threading.Thread(target=handle_answers, args=(p.connection, p.client_address, answer))
+                    client_threads.append(client_thread)
+
+            for client_thread in client_threads:
+                start_thread(client_thread)
+
+            for thread in client_threads:
+                thread.join()
+
+            # Check if all players were disqualified
+            if len(active_connections) == len(disqualified_players):
+                disqualified_players = []
+
+            for player in disqualified_players:
+                send_tcp_message(player_lost(get_player_name(player.connection)), server_op_codes['server_sends_message'])
+                disqualified_players.remove(player)
+                active_connections.remove(player)
+
+            print (next_round(round_number, active_connections))
+            round_number += 1
+
+    print(f"And the winner is {get_player_name(active_connections[0])}")
+
+
+def handle_answers(connection, client_address, correct_answer ):
+    client_name = get_player_name(client_address)
+    # active_connections.
+    start_time = time.time()  # Get the current time
+    answer_flag = False
+    # Each player has 10 seconds to answer
+    while (time.time() - start_time <= 10) or (not answer_flag):
+        try:
+            data = connection.recv(1024);
+            received_answer =data[1:].decode()
+            answer_flag = True
+        except Exception as e:
+            connection
+
+    if answer_flag:
+        if received_answer == correct_answer:
+            # send_tcp_message(player_is_correct(client_name), server_op_codes['server_sends_message'])
+            print(f"{client_name} is correct!")
+        else:
+            # send_tcp_message(player_is_incorrect(client_name), server_op_codes['server_sends_message'])
+            print(f"{client_name} is incorrect!")
+            disqualified_players.append(client_address)
+
+    else:
+            # send_tcp_message(player_times_up(get_player_name(client_address)), server_op_codes['server_sends_message'])
+            # TODO need to print somthing?
+            disqualified_players.append(client_address)
+
+
+
 
 
 def main():

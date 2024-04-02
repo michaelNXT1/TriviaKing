@@ -37,3 +37,23 @@ answer_keys = {
 
 def game_welcome_message(server_name, subject):
     return f"Welcome to the {server_name} server, where we are answering trivia questions about {subject}."
+
+def next_round(round_number, active_players):
+    output = ""
+    for active_player in active_players:
+        output += f"{active_player}"
+    return f"Round {round_number}, played by {output} "
+
+def player_lost(player_name):
+    return f"{player_name} Sorry, you didn't win this time. Better luck next round!"
+
+
+def player_is_correct(player_name):
+    return f"{player_name} is correct!"
+
+
+def player_is_incorrect(player_name):
+    return f"{player_name} is incorrect!"
+
+def player_times_up(player_name):
+    return f"{player_name} times up!"
