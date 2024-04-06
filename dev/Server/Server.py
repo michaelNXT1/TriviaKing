@@ -1,3 +1,4 @@
+import copy
 import socket
 import threading
 import time
@@ -12,6 +13,7 @@ client_threads = []  # List to store each client's thread
 stop_udp_broadcast = False
 server_name = "TeamMysticServer"
 disqualified_players = []
+
 
 
 def send_offer_broadcast():
@@ -109,39 +111,52 @@ def wait_for_clients():
 
 
 def run_game():
+    global disqualified_players  # Declare disqualified_players as a global variable
     round_number = 0
+    active_players = copy.deepcopy(active_connections)
     send_tcp_message(game_welcome_message(server_name, QandA.subject), server_op_codes['server_sends_message'])
     import random
     qa_list = list(QandA.questions_and_answers.keys())
     random.shuffle(qa_list)
-    while len(active_connections) > 1:
+    while len(active_players) > 1:
         for question in qa_list:
             answer = QandA.questions_and_answers[question]
             send_tcp_message(question, server_op_codes['server_requests_input'])
-            for p in active_connections:
+            for p in active_players:
                 client_thread = threading.Thread(target=handle_answers, args=(p.connection, p.client_address, answer))
                 client_threads.append(client_thread)
 
             for client_thread in client_threads:
-                start_thread(client_thread)
+                start_thread(client_thread, True)
 
-            for thread in client_threads:
-                thread.join()
+            for client_thread in client_threads:
+                try:
+                    client_thread.join()
+                except Exception as e:
+                    continue
 
             # Check if all players were disqualified
-            if len(active_connections) == len(disqualified_players):
+            if len(active_players) == len(disqualified_players):
                 disqualified_players = []
 
             for player in disqualified_players:
-                send_tcp_message(player_lost(get_player_name(player.connection)),
-                                 server_op_codes['server_sends_message'])
+                # send_tcp_message(player_lost(get_player_name(player.connection)),
+                #                  server_op_codes['server_sends_message'])
                 disqualified_players.remove(player)
-                active_connections.remove(player)
+                active_players.remove(player)
 
-            print(next_round(round_number, active_connections))
+            print(next_round(round_number, active_players))
             round_number += 1
 
-    print(f"And the winner is {get_player_name(active_connections[0])}")
+        # send Game over to all the active_connections except the winner
+        active_connections.remove(active_players[0])
+        output = f"Game Over!\nCongratulations to the winner: {get_player_name(active_players[0])}"
+        send_tcp_message(output, server_op_codes['server_sends_message'])
+        winner_output = "Congratulations you won!"
+        active_players[0].connection.sendall( server_op_codes['server_sends_message'].to_bytes(1, byteorder='big') +
+                                              bytes(winner_output, 'utf-8'))
+
+
 
 
 def handle_answers(connection, client_address, correct_answer):

@@ -6,18 +6,23 @@ import termios
 
 
 def getch():
-    # Save the current terminal settings
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
     try:
-        # Set the terminal to raw mode
-        tty.setraw(fd)
-        # Read a single character from the keyboard
-        ch = sys.stdin.read(1)
-    finally:
-        # Restore the terminal settings
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return ch
+        # Save the current terminal settings
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            # Set the terminal to raw mode
+            tty.setraw(fd)
+            # Read a single character from the keyboard
+            ch = sys.stdin.read(1)
+        finally:
+            # Restore the terminal settings
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+    except termios.error:
+        # Handle the termios error gracefully (e.g., by providing an alternative way to get input)
+        print("Error: Unable to use termios. Falling back to alternative input method.")
+        return input("Fallback input: ")  # Provide a fallback input method (e.g., using standard input)
 
 
 def send_message(sock, msg, op_code=0x00):
@@ -27,14 +32,15 @@ def send_message(sock, msg, op_code=0x00):
 def receive_offer_broadcast():
     # Create UDP socket
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # Set SO_REUSEPORT option
     udp_socket.bind(('0.0.0.0', client_consts['server_port']))
 
     # Receive UDP broadcast
     data, addr = udp_socket.recvfrom(general['buffer_size'])
 
     # Parse received data
-    magic_cookie = int.from_bytes(data[:4])
-    message_type = int.from_bytes(data[4:5])
+    magic_cookie = int.from_bytes(data[:4],  byteorder='big')
+    message_type = int.from_bytes(data[4:5],  byteorder='big')
     server_name = data[5:37].decode('utf-8').strip()
     server_port = int.from_bytes(data[37:39], byteorder='big')
 
@@ -54,8 +60,8 @@ def receive_offer_broadcast():
             # Continuously prompt user for input until "QUIT" is entered
             while True:
                 # Receive response from server
-                data = tcp_socket.recv(1024)
-                op_code = int.from_bytes(data[:1])
+                data = tcp_socket.recv(13117)
+                op_code = int.from_bytes(data[:1],  byteorder='big')
                 content = data[1:].decode()
                 if op_code == server_op_codes['server_sends_message']:
                     print(content)
@@ -64,10 +70,11 @@ def receive_offer_broadcast():
                     print("Game over")
                     break
                 elif op_code == server_op_codes['server_requests_input']:
+                    print(content)
                     valid_answer = False
                     while not valid_answer:
                         print('please enter your answer: ', end='')
-                        user_input = getch().upper()
+                        user_input = input().upper()
                         if user_input in answer_keys.keys():
                             valid_answer = True
                             answer = answer_keys[user_input]
