@@ -26,6 +26,9 @@ def getch():
 
 
 def send_message(sock, msg, op_code=0x00):
+    if not isinstance(msg, str):
+        msg = str(msg)
+        # Encode the string message and send it
     sock.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
 
 

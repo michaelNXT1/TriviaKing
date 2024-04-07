@@ -6,14 +6,14 @@ import time
 from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
-    player_lost, next_round
+    player_lost, next_round, answer_keys
 
 active_connections = []  # List to store active connections
-client_threads = []  # List to store each client's thread
+# client_threads = []  # List to store each client's thread
 stop_udp_broadcast = False
 server_name = "TeamMysticServer"
 disqualified_players = []
-
+game_on = False
 
 
 def send_offer_broadcast():
@@ -72,11 +72,13 @@ def monitor_connections():
         print(f"Number of active connections: {len(active_connections)}")
         # Sleep for 5 seconds before checking again
         time.sleep(5)
+        if game_on:
+            return
 
 
-def get_player_name(player):
+def get_player_name(player_address):
     for p in active_connections:
-        if p.client_address == player.client_address:
+        if p.client_address == player_address:
             return p.user_name
         return None
 
@@ -110,16 +112,44 @@ def wait_for_clients():
     stop_udp_broadcast = True
 
 
+def send_game_over_message(winner):
+    active_connections.remove(winner)
+    output = f"Game Over!\nCongratulations to the winner: {get_player_name(winner.client_address)}"
+    send_tcp_message(output, server_op_codes['server_sends_message'])
+    winner_output = "Congratulations you won!"
+    winner.connection.sendall(server_op_codes['server_sends_message'].to_bytes(1, byteorder='big') +
+                              bytes(winner_output, 'utf-8'))
+    global game_on
+    game_on = False
+
+
+def players_in_game():
+    active_players = []
+    for player in active_connections:
+        active_players.append(player)
+    return active_players
+
+
+def remove_player(client_address, active_players):
+    for player in active_players[:]:
+        if player.client_address == client_address:
+            active_players.remove(player)
+            return
+
+
 def run_game():
+    global game_on
+    game_on = True
     global disqualified_players  # Declare disqualified_players as a global variable
     round_number = 0
     active_players = copy.deepcopy(active_connections)
     send_tcp_message(game_welcome_message(server_name, QandA.subject), server_op_codes['server_sends_message'])
     import random
     qa_list = list(QandA.questions_and_answers.keys())
-    random.shuffle(qa_list)
+    # random.shuffle(qa_list)
     while len(active_players) > 1:
         for question in qa_list:
+            client_threads = []
             answer = QandA.questions_and_answers[question]
             send_tcp_message(question, server_op_codes['server_requests_input'])
             for p in active_players:
@@ -127,13 +157,10 @@ def run_game():
                 client_threads.append(client_thread)
 
             for client_thread in client_threads:
-                start_thread(client_thread, True)
+                client_thread.start()
 
             for client_thread in client_threads:
-                try:
-                    client_thread.join()
-                except Exception as e:
-                    continue
+                client_thread.join()
 
             # Check if all players were disqualified
             if len(active_players) == len(disqualified_players):
@@ -143,38 +170,30 @@ def run_game():
                 # send_tcp_message(player_lost(get_player_name(player.connection)),
                 #                  server_op_codes['server_sends_message'])
                 disqualified_players.remove(player)
-                active_players.remove(player)
+                remove_player(player, active_players)
 
-            print(next_round(round_number, active_players))
+            next_round(round_number, active_players)
             round_number += 1
 
-        # send Game over to all the active_connections except the winner
-        active_connections.remove(active_players[0])
-        output = f"Game Over!\nCongratulations to the winner: {get_player_name(active_players[0])}"
-        send_tcp_message(output, server_op_codes['server_sends_message'])
-        winner_output = "Congratulations you won!"
-        active_players[0].connection.sendall( server_op_codes['server_sends_message'].to_bytes(1, byteorder='big') +
-                                              bytes(winner_output, 'utf-8'))
-
-
+        send_game_over_message(active_players[0])
 
 
 def handle_answers(connection, client_address, correct_answer):
     client_name = get_player_name(client_address)
-    # active_connections.
-    start_time = time.time()  # Get the current time
+    start_time = time.time()
     answer_flag = False
-    # Each player has 10 seconds to answer
-    while (time.time() - start_time <= 10) or (not answer_flag):
+    while time.time() - start_time <= 10:  # Check if 10 seconds have elapsed
         try:
-            data = connection.recv(1024);
+            connection.settimeout(10 - (time.time() - start_time))  # Set timeout for receiving data
+            data = connection.recv(1024)
             received_answer = data[1:].decode()
             answer_flag = True
-        except Exception as e:
-            continue
+            break  # Exit loop if data is received
+        except socket.timeout:
+            continue  # Continue looping if no data is received within timeout
 
     if answer_flag:
-        if received_answer == correct_answer:
+        if received_answer == str(correct_answer):
             # send_tcp_message(player_is_correct(client_name), server_op_codes['server_sends_message'])
             print(f"{client_name} is correct!")
         else:
@@ -185,6 +204,7 @@ def handle_answers(connection, client_address, correct_answer):
     else:
         # send_tcp_message(player_times_up(get_player_name(client_address)), server_op_codes['server_sends_message'])
         # TODO need to print somthing?
+        print(f"{client_name} time's up!")
         disqualified_players.append(client_address)
 
 
@@ -194,6 +214,8 @@ def main():
         run_game()
     else:
         print("Just on connection ")
+
+
 #         TODO need to change after implementing the bot
 
 if __name__ == "__main__":
