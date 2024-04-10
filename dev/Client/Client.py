@@ -1,28 +1,5 @@
 import socket
 from dev.config import client_consts, general, client_op_codes, server_op_codes, answer_keys
-import sys
-import tty
-import termios
-
-
-def getch():
-    try:
-        # Save the current terminal settings
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            # Set the terminal to raw mode
-            tty.setraw(fd)
-            # Read a single character from the keyboard
-            ch = sys.stdin.read(1)
-        finally:
-            # Restore the terminal settings
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-    except termios.error:
-        # Handle the termios error gracefully (e.g., by providing an alternative way to get input)
-        print("Error: Unable to use termios. Falling back to alternative input method.")
-        return input("Fallback input: ")  # Provide a fallback input method (e.g., using standard input)
 
 
 def send_message(sock, msg, op_code=0x00):
