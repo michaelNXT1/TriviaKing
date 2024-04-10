@@ -183,6 +183,7 @@ def handle_answers(connection, client_address, correct_answer):
     client_name = get_player_name(client_address)
     start_time = time.time()
     answer_flag = False
+    output = ''
     while time.time() - start_time <= 10:  # Check if 10 seconds have elapsed
         try:
             connection.settimeout(10 - (time.time() - start_time))  # Set timeout for receiving data
@@ -195,18 +196,16 @@ def handle_answers(connection, client_address, correct_answer):
 
     if answer_flag:
         if received_answer == str(correct_answer):
-            # send_tcp_message(player_is_correct(client_name), server_op_codes['server_sends_message'])
-            print(f"{client_name} is correct!")
+            output = f"{client_name} is correct!"
         else:
-            # send_tcp_message(player_is_incorrect(client_name), server_op_codes['server_sends_message'])
-            print(f"{client_name} is incorrect!")
+            output = f"{client_name} is incorrect!"
             disqualified_players.append(client_address)
 
     else:
-        # send_tcp_message(player_times_up(get_player_name(client_address)), server_op_codes['server_sends_message'])
-        # TODO need to print somthing?
-        print(f"{client_name} time's up!")
+        output = f"{client_name} time's up!"
         disqualified_players.append(client_address)
+    print(output)
+    send_tcp_message(output, server_op_codes['server_sends_message'], connection=connection)
 
 
 def main():
