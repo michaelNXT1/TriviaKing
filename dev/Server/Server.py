@@ -150,34 +150,36 @@ def run_game():
     import random
     qa_list = list(QandA.questions_and_answers.keys())
     # random.shuffle(qa_list)
-    for question in qa_list:
-        next_round(round_number, active_players)
-        client_threads = []
-        answer = QandA.questions_and_answers[question]
-        send_tcp_message(question, server_op_codes['server_requests_input'])
-        for p in active_players:
-            client_thread = threading.Thread(target=handle_answers, args=(p.connection, p.client_address, answer))
-            client_threads.append(client_thread)
+    while len(active_players) > 1:
+        for question in qa_list:
+            next_round_msg = next_round(round_number, active_players)
+            send_tcp_message(next_round_msg, server_op_codes['server_sends_message'])
+            client_threads = []
+            answer = QandA.questions_and_answers[question]
+            send_tcp_message(question, server_op_codes['server_requests_input'])
+            for p in active_players:
+                client_thread = threading.Thread(target=handle_answers, args=(p.connection, p.client_address, answer))
+                client_threads.append(client_thread)
 
-        for client_thread in client_threads:
-            client_thread.start()
+            for client_thread in client_threads:
+                client_thread.start()
 
-        for client_thread in client_threads:
-            client_thread.join()
+            for client_thread in client_threads:
+                client_thread.join()
 
-        # Check if all players were disqualified
-        if len(active_players) == len(disqualified_players):
-            disqualified_players = []
+            # Check if all players were disqualified
+            if len(active_players) == len(disqualified_players):
+                disqualified_players = []
 
-        for player in disqualified_players:
-            # send_tcp_message(player_lost(get_player_name(player.connection)),
-            #                  server_op_codes['server_sends_message'])
-            disqualified_players.remove(player)
-            remove_player(player, active_players)
+            for player in disqualified_players:
+                # send_tcp_message(player_lost(get_player_name(player.connection)),
+                #                  server_op_codes['server_sends_message'])
+                disqualified_players.remove(player)
+                remove_player(player, active_players)
 
-        round_number += 1
-        if len(active_players) == 1:
-            break
+            round_number += 1
+            if len(active_players) == 1:
+                break
 
     send_game_over_message(active_players[0])
 
