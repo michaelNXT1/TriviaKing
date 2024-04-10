@@ -113,11 +113,11 @@ def wait_for_clients():
 
 
 def send_game_over_message(winner):
-    active_connections.remove(winner)
-    output = f"Game Over!\nCongratulations to the winner: {get_player_name(winner.client_address)}"
-    send_tcp_message(output, server_op_codes['server_sends_message'])
+    remove_player(winner.client_address, active_connections)
+    output = f"Game Over!\nCongratulations to the winner: {winner.user_name}"
+    send_tcp_message(output, server_op_codes['server_ends_game'])
     winner_output = "Congratulations you won!"
-    winner.connection.sendall(server_op_codes['server_sends_message'].to_bytes(1, byteorder='big') +
+    winner.connection.sendall(server_op_codes['server_ends_game'].to_bytes(1, byteorder='big') +
                               bytes(winner_output, 'utf-8'))
     global game_on
     game_on = False
