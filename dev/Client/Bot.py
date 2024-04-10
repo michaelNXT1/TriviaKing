@@ -30,7 +30,8 @@ def receive_offer_broadcast():
     if magic_cookie == client_consts['magic_cookie'] and message_type == client_consts['message_type']:
         print(f'Received offer from server “{server_name}” at address {addr[0]}, attempting to connect...')
         global number_of_bots
-        user_name = f"BOT{number_of_bots}"
+        random_number = random.randint(1, 100)
+        user_name = f"BOT{random_number}"
         number_of_bots = number_of_bots + 1
 
     # Establish TCP connection
@@ -59,6 +60,7 @@ def receive_offer_broadcast():
                     while not valid_answer:
                         options = ['0', '1']
                         random_answer = random.choice(options)
+                        print(random_answer)
                         if random_answer in answer_keys.keys():
                             valid_answer = True
                             answer = answer_keys[random_answer]
