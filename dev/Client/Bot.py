@@ -33,6 +33,7 @@ def receive_offer_broadcast():
         random_number = random.randint(1, 100)
         user_name = f"BOT{random_number}"
         number_of_bots = number_of_bots + 1
+        print(f"Bot name: {user_name}")
 
     # Establish TCP connection
         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -49,22 +50,18 @@ def receive_offer_broadcast():
                 op_code = int.from_bytes(data[:1],  byteorder='big')
                 content = data[1:].decode()
                 if op_code == server_op_codes['server_sends_message']:
-                    print(content)
-                if op_code == server_op_codes['server_ends_game']:
+                    print('Message from Server: ' + content)
+                elif op_code == server_op_codes['server_ends_game']:
                     print(content)
                     print("Game over")
                     break
                 elif op_code == server_op_codes['server_requests_input']:
-                    print(content)
-                    valid_answer = False
-                    while not valid_answer:
-                        options = ['0', '1']
-                        random_answer = random.choice(options)
-                        print(random_answer)
-                        if random_answer in answer_keys.keys():
-                            valid_answer = True
-                            answer = answer_keys[random_answer]
-                            send_message(tcp_socket, answer, client_op_codes['client_sends_answer'])
+                    print('Question from Server: ' + content)
+                    options = ['0', '1']
+                    random_answer = random.choice(options)
+                    print('Bot generated random answer: ' + str(answer_keys[random_answer]))
+                    answer = answer_keys[random_answer]
+                    send_message(tcp_socket, answer, client_op_codes['client_sends_answer'])
         finally:
             # Close TCP connection
             tcp_socket.close()
