@@ -80,7 +80,7 @@ def get_player_name(player_address):
     for p in active_connections:
         if p.client_address == player_address:
             return p.user_name
-        return None
+    return None
 
 
 def start_thread(target, is_daemon):
