@@ -31,7 +31,7 @@ answer_keys = {
     '1': True,
     'N': False,
     'F': False,
-    '2': False
+    '0': False
 }
 
 
