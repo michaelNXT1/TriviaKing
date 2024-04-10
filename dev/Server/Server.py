@@ -41,7 +41,10 @@ def send_offer_broadcast():
     udp_socket.close()
 
 
-def send_tcp_message(msg, op_code):
+def send_tcp_message(msg, op_code, connection=None):
+    if connection is not None:
+        connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
+        return
     print(msg)
     for p in active_connections:
         p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
