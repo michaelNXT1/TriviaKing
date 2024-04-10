@@ -44,7 +44,7 @@ def receive_offer_broadcast():
             # Continuously prompt user for input until "QUIT" is entered
             while True:
                 # Receive response from server
-                data = tcp_socket.recv(13117)
+                data = tcp_socket.recv(1024)
                 op_code = int.from_bytes(data[:1],  byteorder='big')
                 content = data[1:].decode()
                 if op_code == server_op_codes['server_sends_message']:
