@@ -47,7 +47,11 @@ def send_tcp_message(msg, op_code, connection=None):
         return
     print(msg)
     for p in active_connections:
-        p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
+       try:
+            p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
+       except ConnectionResetError:
+            print(f"Error occurred with connection from {p.client_address}")
+            remove_player(p.client_address, active_connections)
 
 
 def handle_tcp_connection(connection, client_address):
@@ -61,7 +65,7 @@ def handle_tcp_connection(connection, client_address):
     except Exception as e:
         print(f"Error occurred with connection from {client_address}: {e}")
 
-    # finally:
+    #finally:
     #     # Remove connection from the list of active connections
     #     del active_connections[(connection, client_address)]
     #     # Clean up the connection
@@ -72,7 +76,8 @@ def handle_tcp_connection(connection, client_address):
 def monitor_connections():
     while True:
         # Print the number of active connections
-        print(f"Number of active connections: {len(active_connections)}")
+        output = f"Number of active connections: {len(active_connections)}"
+        send_tcp_message(output, server_op_codes['server_sends_message'])
         # Sleep for 5 seconds before checking again
         time.sleep(5)
         if game_on:
@@ -111,14 +116,20 @@ def wait_for_clients():
             last_join_time = time.time()
         except socket.timeout:
             break
+
     global stop_udp_broadcast
     stop_udp_broadcast = True
+
 
 
 def send_game_over_message(winner):
     remove_player(winner.client_address, active_connections)
     output = f"Game Over!\nCongratulations to the winner: {winner.user_name}"
-    send_tcp_message(output, server_op_codes['server_ends_game'])
+    try:
+        send_tcp_message(output, server_op_codes['server_ends_game'])
+    except ConnectionResetError:
+        remove_player(winner.client_address, active_connections)
+        print("Error: Connection reset by peer")
     winner_output = "Congratulations you won!"
     winner.connection.sendall(server_op_codes['server_ends_game'].to_bytes(1, byteorder='big') +
                               bytes(winner_output, 'utf-8'))
@@ -146,17 +157,27 @@ def run_game():
     global disqualified_players  # Declare disqualified_players as a global variable
     round_number = 1
     active_players = copy.deepcopy(active_connections)
-    send_tcp_message(game_welcome_message(server_name, QandA.subject), server_op_codes['server_sends_message'])
+    try:
+        send_tcp_message(game_welcome_message(server_name, QandA.subject), server_op_codes['server_sends_message'])
+    except ConnectionResetError:
+        print("Error: Connection reset by peer")
     import random
     qa_list = list(QandA.questions_and_answers.keys())
     # random.shuffle(qa_list)
     while len(active_players) > 1:
         for question in qa_list:
             next_round_msg = next_round(round_number, active_players)
-            send_tcp_message(next_round_msg, server_op_codes['server_sends_message'])
+            try:
+                send_tcp_message(next_round_msg, server_op_codes['server_sends_message'])
+            except ConnectionResetError:
+                print("Error: Connection reset by peer")
             client_threads = []
             answer = QandA.questions_and_answers[question]
-            send_tcp_message(question, server_op_codes['server_requests_input'])
+            try:
+                send_tcp_message(question, server_op_codes['server_requests_input'])
+            #maybe in other place
+            except ConnectionResetError:
+                print("Error: Connection reset by peer")
             for p in active_players:
                 client_thread = threading.Thread(target=handle_answers, args=(p.connection, p.client_address, answer))
                 client_threads.append(client_thread)
@@ -210,8 +231,10 @@ def handle_answers(connection, client_address, correct_answer):
         output = f"{client_name} time's up!"
         disqualified_players.append(client_address)
     print(output)
-    send_tcp_message(output, server_op_codes['server_sends_message'], connection=connection)
-
+    try:
+        send_tcp_message(output, server_op_codes['server_sends_message'], connection=connection)
+    except ConnectionResetError:
+        print("Error: Connection reset by peer")
 
 def main():
     wait_for_clients()
