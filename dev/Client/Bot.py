@@ -1,9 +1,7 @@
 import socket
 from dev.config import client_consts, general, client_op_codes, server_op_codes, answer_keys
 import random
-
-global number_of_bots
-number_of_bots = 1
+import uuid
 
 def send_message(sock, msg, op_code=0x00):
     if not isinstance(msg, str):
@@ -29,10 +27,12 @@ def receive_offer_broadcast():
     # Check if the received message is an offer   
     if magic_cookie == client_consts['magic_cookie'] and message_type == client_consts['message_type']:
         print(f'Received offer from server “{server_name}” at address {addr[0]}, attempting to connect...')
-        global number_of_bots
-        random_number = random.randint(1, 100)
-        user_name = f"BOT{random_number}"
-        number_of_bots = number_of_bots + 1
+        new_uuid = uuid.uuid4()
+        # Convert UUID to a hexadecimal string
+        hex_string = new_uuid.hex
+        # Convert hexadecimal string to integer
+        uuid_as_number = int(hex_string, 16)
+        user_name = f"BOT{uuid_as_number}"
         print(f"Bot name: {user_name}")
 
     # Establish TCP connection
