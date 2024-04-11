@@ -47,7 +47,7 @@ def round_details(round_number, active_players):
 
 
 def game_over_message(winner_name):
-    return blue_text(f"Game Over!\nCongratulations to the winner: {winner_name.user_name} \n")
+    return f"Game Over!\nCongratulations to the winner: {winner_name.user_name} \n"
 
 
 def game_winner():
@@ -74,4 +74,5 @@ def yellow_text(text):
     return "\033[1;33m" + text + "\033[0m"
 
 
-
+def cyan_text(text):
+    return "\033[1;36;40m" + text + "\033[0m"

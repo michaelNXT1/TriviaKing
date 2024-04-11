@@ -6,7 +6,7 @@ import time
 from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
-    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text
+    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, cyan_text
 
 active_connections = []  # List to store active connections
 stop_udp_broadcast = False
@@ -41,7 +41,7 @@ def send_offer_broadcast():
 
 
 def send_tcp_message(msg, op_code):
-    print(msg)
+    print(cyan_text(msg))
     for p in active_connections:
         try:
             p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
@@ -53,7 +53,7 @@ def send_tcp_message(msg, op_code):
 
 def handle_tcp_connection(connection, client_address):
     try:
-        print(green_text(f"Connection accepted from: {client_address}"))
+        print(yellow_text(f"Connection accepted from: {client_address}"))
         data = connection.recv(1024)
         content = data[1:].decode()
         active_connections.append(Player(connection, client_address, content))
