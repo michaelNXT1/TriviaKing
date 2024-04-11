@@ -31,7 +31,7 @@ answer_keys = {
     '1': True,
     'N': False,
     'F': False,
-    '2': False
+    '0': False
 }
 
 
@@ -43,7 +43,7 @@ def round_details(round_number, active_players):
     output = f"Round {round_number}, played by {active_players[0].user_name}"
     for active_player in active_players[1:]:
         output += f" and {active_player.user_name}"
-    print(output)
+    return output
 
 
 def player_lost(player_name):
