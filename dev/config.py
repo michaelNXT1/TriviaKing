@@ -43,19 +43,35 @@ def round_details(round_number, active_players):
     output = f"Round {round_number}, played by {active_players[0].user_name}"
     for active_player in active_players[1:]:
         output += f" and {active_player.user_name}"
-    print(output)
+    print(yellow_text(output))
+
+
+def game_over_message(winner_name):
+    return blue_text(f"Game Over!\nCongratulations to the winner: {winner_name.user_name} \n")
+
+
+def game_winner():
+    return "Congratulations you won!"
 
 
 def player_lost(player_name):
     return f"{player_name} Sorry, you didn't win this time. Better luck next round!"
 
 
-def game_over_message(winner_name):
-    return  f"Game Over!\nCongratulations to the winner: {winner_name.user_name} \n"
+def red_text(text):
+    return "\033[1;31m" + text + "\033[0m"
 
 
-def game_winner():
-    return "Congratulations you won!"
+def green_text(text):
+    return "\033[1;32m" + text + "\033[0m"
+
+
+def blue_text(text):
+    return "\033[1;34m" + text + "\033[0m"
+
+
+def yellow_text(text):
+    return "\033[1;33m" + text + "\033[0m"
 
 
 

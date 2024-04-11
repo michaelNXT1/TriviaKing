@@ -6,7 +6,7 @@ import time
 from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
-    round_details, game_over_message, game_winner
+    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text
 
 active_connections = []  # List to store active connections
 stop_udp_broadcast = False
@@ -46,14 +46,14 @@ def send_tcp_message(msg, op_code):
         try:
             p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
         except BrokenPipeError:
-            print(f"BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
+            print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
             # Handle the broken connection, such as removing the player from active connections
             active_connections.remove(p)
 
 
 def handle_tcp_connection(connection, client_address):
     try:
-        print("Connection accepted from:", client_address)
+        print(green_text(f"Connection accepted from: {client_address}"))
         data = connection.recv(1024)
         content = data[1:].decode()
         active_connections.append(Player(connection, client_address, content))
@@ -73,7 +73,7 @@ def handle_tcp_connection(connection, client_address):
 def monitor_connections():
     while True:
         # Print the number of active connections
-        print(f"Number of active connections: {len(active_connections)}")
+        print(yellow_text(f"Number of active connections: {len(active_connections)}"))
         # Sleep for 5 seconds before checking again
         time.sleep(5)
         if game_on:
@@ -102,7 +102,7 @@ def wait_for_clients():
     server_address = ('', 12345)  # Example port, replace with your desired port
     tcp_socket.bind(server_address)
     tcp_socket.listen(5)  # Listen for incoming connections
-    print("Server started, listening on IP address 172.1.0.4")
+    print(yellow_text("Server started, listening on IP address 172.1.0.4"))
     last_join_time = time.time()
     while time.time() - last_join_time < 10:
         tcp_socket.settimeout(10)
@@ -176,7 +176,7 @@ def run_game():
 
         round_number += 1
         if round_number > len(qa_list):
-            print("The players were very smart for the TriviaKing")
+            print(blue_text("The players were very smart for the TriviaKing"))
             break
         else:
             question = qa_list[round_number]
@@ -201,13 +201,13 @@ def handle_answers(player, correct_answer):
 
     if answer_flag:
         if received_answer == str(correct_answer):
-            print(f"{client_name} is correct!")
+            print(green_text(f"{client_name} is correct!"))
         else:
-            print(f"{client_name} is incorrect!")
+            print(red_text(f"{client_name} is incorrect!"))
             disqualified_players.append(player)
 
     else:
-        print(f"{client_name} time's up!")
+        print(red_text(f"{client_name} time's up!"))
         disqualified_players.append(player)
 
 
@@ -216,7 +216,7 @@ def main():
     if len(active_connections) >= 1:
         run_game()
     else:
-        print("Just one connection ")
+        print(yellow_text("Just one connection "))
 
 
 # TODO need to change after implementing the bot
