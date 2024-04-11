@@ -70,7 +70,7 @@ def receive_offer_broadcast():
                     print(content)
                 if op_code == server_op_codes['server_ends_game']:
                     print(content)
-                    print("Game over")
+                    # print("Game over")
                     break
                 elif op_code == server_op_codes['server_requests_input']:
                     print(content)

@@ -51,7 +51,7 @@ def player_lost(player_name):
 
 
 def game_over_message(winner_name):
-    return  f"Game Over!\nCongratulations to the winner: {winner_name}"
+    return  f"Game Over!\nCongratulations to the winner: {winner_name.user_name} \n"
 
 
 def game_winner():

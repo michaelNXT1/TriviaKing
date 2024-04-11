@@ -117,12 +117,13 @@ def wait_for_clients():
 
 
 def send_game_over_message(winner):
-    active_connections.remove(winner)
-    output = game_over_message(winner, get_player_name(winner.client_address))
-    send_tcp_message(output, server_op_codes['server_sends_message'])
-    output = game_winner()
-    winner.connection.sendall(server_op_codes['server_sends_message'].to_bytes(1, byteorder='big') +
-                              bytes(output, 'utf-8'))
+    if winner in active_connections:
+        active_connections.remove(winner)
+    output = game_over_message(winner)
+    send_tcp_message(output, server_op_codes['server_ends_game'])
+    # output = game_winner()
+    # winner.connection.sendall(server_op_codes['server_sends_message'].to_bytes(1, byteorder='big') +
+    #                           bytes(output, 'utf-8'))
     global game_on
     game_on = False
 
@@ -134,11 +135,9 @@ def players_in_game():
     return active_players
 
 
-def remove_player(disqualified_player, active_players):
-    for player in active_players[:]:
-        if player == disqualified_player:
-            active_players.remove(player)
-            return
+def remove_player(player, active_players):
+    if player in active_players:
+        active_players.remove(player)
 
 
 def run_game():
@@ -151,33 +150,38 @@ def run_game():
     import random
     qa_list = list(QandA.questions_and_answers.keys())
     # random.shuffle(qa_list)
+    question = qa_list[0]
     while len(active_players) > 1:
         round_details(round_number, active_players)
-        for question in qa_list:
-            client_threads = []
-            answer = QandA.questions_and_answers[question]
-            send_tcp_message(question, server_op_codes['server_requests_input'])
-            for p in active_players:
-                client_thread = threading.Thread(target=handle_answers, args=(p, answer))
-                client_threads.append(client_thread)
+        client_threads = []
+        answer = QandA.questions_and_answers[question]
+        send_tcp_message(question, server_op_codes['server_requests_input'])
+        for p in active_players:
+            client_thread = threading.Thread(target=handle_answers, args=(p, answer))
+            client_threads.append(client_thread)
 
-            for client_thread in client_threads:
-                client_thread.start()
+        for client_thread in client_threads:
+            client_thread.start()
 
-            for client_thread in client_threads:
-                client_thread.join()
+        for client_thread in client_threads:
+            client_thread.join()
 
-            # Check if all players were disqualified
-            if len(active_players) == len(disqualified_players):
-                disqualified_players = []
+        # Check if all players were disqualified
+        if len(active_players) == len(disqualified_players):
+            disqualified_players = []
 
-            for player in disqualified_players:
-                remove_player(player, active_players)
-                disqualified_players.remove(player)
+        for player in disqualified_players:
+            remove_player(player, active_players)
+            disqualified_players.remove(player)
 
-            round_number += 1
+        round_number += 1
+        if round_number > len(qa_list):
+            print("The players were very smart for the TriviaKing")
+            break
+        else:
+            question = qa_list[round_number]
 
-    print(game_over_message(active_players[0]))
+    # print(game_over_message(active_players[0]))
     send_game_over_message(active_players[0])
 
 
@@ -212,10 +216,10 @@ def main():
     if len(active_connections) >= 1:
         run_game()
     else:
-        print("Just on connection ")
+        print("Just one connection ")
 
 
-#         TODO need to change after implementing the bot
+# TODO need to change after implementing the bot
 
 if __name__ == "__main__":
     main()
