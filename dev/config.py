@@ -23,6 +23,7 @@ server_op_codes = dict(
     server_sends_message=0x00,
     server_requests_input=0x01,
     server_ends_game=0x02,
+    server_requests_other_name=0x03
 )
 
 answer_keys = {
@@ -60,3 +61,9 @@ def player_is_incorrect(player_name):
 
 def player_times_up(player_name):
     return f"{player_name} times up!"
+
+def check_player_name(player_name, active_players):
+    for active_player in active_players:
+        if active_player.user_name == player_name:
+            return True
+    return False

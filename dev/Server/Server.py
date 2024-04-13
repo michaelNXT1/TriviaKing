@@ -6,7 +6,7 @@ import time
 from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
-    player_lost, next_round, answer_keys
+    player_lost, next_round, answer_keys, check_player_name
 
 active_connections = []  # List to store active connections
 # client_threads = []  # List to store each client's thread
@@ -56,11 +56,15 @@ def send_tcp_message(msg, op_code, connection=None):
 
 def handle_tcp_connection(connection, client_address):
     try:
-        print("Connection accepted from:", client_address)
         data = connection.recv(1024)
         content = data[1:].decode()
-        active_connections.append(Player(connection, client_address, content))
-        connection.sendall(b"Your name has been submitted!")
+        if check_player_name(content, active_connections):
+            connection.sendall(server_op_codes['server_requests_other_name'].to_bytes(1, byteorder='big'))
+        else:
+            print("Connection accepted from:", client_address)
+            active_connections.append(Player(connection, client_address, content))
+            connection.sendall(b"Your name has been submitted!")
+
 
     except Exception as e:
         print(f"Error occurred with connection from {client_address}: {e}")

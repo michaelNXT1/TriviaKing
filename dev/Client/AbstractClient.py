@@ -45,14 +45,12 @@ class AbstractClient(ABC):
             try:
                 # Send success message over TCP
                 self.send_message(tcp_socket,user_name, client_op_codes['client_sends_name'])
-                print('successfully connected')
                 # Continuously prompt user for input until "QUIT" is entered
                 while True:
                     # Receive response from server
                     try:
                         data = tcp_socket.recv(1024)
                     except ConnectionResetError:
-                        # change the ptint
                         print("Connection reset by remote host. Reconnecting...")
                         break
                     op_code = int.from_bytes(data[:1], byteorder='big')
@@ -67,6 +65,14 @@ class AbstractClient(ABC):
                         print('Question from Server: ' + content)
                         answer = self.getAnswer()
                         self.send_message(tcp_socket,answer, client_op_codes['client_sends_answer'])
+                    elif op_code == server_op_codes['server_requests_other_name']:
+                        print("Your name is in use by someone else, please try again")
+                        user_name = self.getName()
+                        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        tcp_socket.connect((addr[0], server_port))
+                        self.send_message(tcp_socket, user_name, client_op_codes['client_sends_name'])
+                    else:
+                        print('successfully connected')
             finally:
                 # Close TCP connection
                 tcp_socket.close()
@@ -95,15 +101,23 @@ class Bot(AbstractClient):
 
 class Client(AbstractClient):
     def getName(self):
-        user_name = input("Please enter your name: ")
-        return user_name
+        try:
+            user_name = input("Please enter your name: ")
+            return user_name
+        except KeyboardInterrupt:
+            print("program stop when wait to name")
+            exit()
 
     def getAnswer(self):
-        valid_answer = False
-        while not valid_answer:
-            print('please enter your answer: ', end='')
-            user_input = input().upper()
-            if user_input in answer_keys.keys():
-                valid_answer = True
-                answer = answer_keys[user_input]
-                return answer
+        try:
+            valid_answer = False
+            while not valid_answer:
+                print('please enter your answer: ', end='')
+                user_input = input().upper()
+                if user_input in answer_keys.keys():
+                    valid_answer = True
+                    answer = answer_keys[user_input]
+                    return answer
+        except KeyboardInterrupt:
+            print("program stop when wait to answer")
+            exit()
