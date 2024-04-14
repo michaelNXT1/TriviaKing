@@ -52,6 +52,9 @@ def send_tcp_message(msg, op_code, connection=None):
        except ConnectionResetError:
             print(f"Error occurred with connection from {p.client_address}")
             remove_player(p.client_address, active_connections)
+       except ConnectionAbortedError:
+           print("Error occurred with connection from {}".format(p.client_address))
+           #break
 
 
 def handle_tcp_connection(connection, client_address):
@@ -135,8 +138,11 @@ def send_game_over_message(winner):
         remove_player(winner.client_address, active_connections)
         print("Error: Connection reset by peer")
     winner_output = "Congratulations you won!"
-    winner.connection.sendall(server_op_codes['server_ends_game'].to_bytes(1, byteorder='big') +
+    try:
+        winner.connection.sendall(server_op_codes['server_ends_game'].to_bytes(1, byteorder='big') +
                               bytes(winner_output, 'utf-8'))
+    except ConnectionResetError:
+        print("Error: Connection reset by peer")
     global game_on
     game_on = False
 
