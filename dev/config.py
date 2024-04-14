@@ -67,6 +67,15 @@ def player_times_up(player_name):
     return f"{player_name} times up!"
 
 
+def fastest_player_time(player_name, avg_response_time):
+    print(blue_text(f"Fastest Player in TriviaKing: {player_name} with Average Response Time: {avg_response_time} seconds"))
+
+
+def avg_response_time(avg_time):
+    message = f"Your average response time: {avg_time:.2f} seconds"
+    return message
+
+
 def red_text(text):
     return "\033[1;31m" + text + "\033[0m"
 
@@ -74,8 +83,10 @@ def red_text(text):
 def green_text(text):
     return "\033[1;32m" + text + "\033[0m"
 
+
 def cyan_text(text):
     return "\033[1;36;40m" + text + "\033[0m"
+
 
 def blue_text(text):
     return "\033[1;34m" + text + "\033[0m"

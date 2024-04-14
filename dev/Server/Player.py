@@ -3,6 +3,7 @@ class Player:
         self.connection = connection
         self.client_address = client_address
         self.user_name = user_name
+        self.response_times = []
 
     def __deepcopy__(self, memo):
         # Create a new Player object with the same attributes

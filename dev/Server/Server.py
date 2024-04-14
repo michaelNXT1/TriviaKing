@@ -6,7 +6,8 @@ import time
 from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
-    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, cyan_text, check_player_name
+    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, cyan_text, \
+    check_player_name, fastest_player_time, avg_response_time
 
 active_connections = []  # List to store active connections
 # client_threads = []  # List to store each client's thread
@@ -47,17 +48,18 @@ def send_tcp_message(msg, op_code, connection=None):
         return
     print(cyan_text(msg))
     for p in active_connections:
-       try:
+        try:
             p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
-       except ConnectionResetError:
+        except ConnectionResetError:
             print(f"Error occurred with connection from {p.client_address}")
             remove_player(p, active_connections)
-       except ConnectionAbortedError:
-           print("Error occurred with connection from {}".format(p.client_address))
-       except BrokenPipeError:
-           print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
-           # Handle the broken connection, such as removing the player from active connections
-           active_connections.remove(p)
+        except ConnectionAbortedError:
+            print("Error occurred with connection from {}".format(p.client_address))
+        except BrokenPipeError:
+            print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
+            # Handle the broken connection, such as removing the player from active connections
+            active_connections.remove(p)
+
 
 def handle_tcp_connection(connection, client_address):
     try:
@@ -74,7 +76,7 @@ def handle_tcp_connection(connection, client_address):
     except Exception as e:
         print(f"Error occurred with connection from {client_address}: {e}")
 
-    #finally:
+    # finally:
     #     # Remove connection from the list of active connections
     #     del active_connections[(connection, client_address)]
     #     # Clean up the connection
@@ -129,8 +131,15 @@ def wait_for_clients():
     stop_udp_broadcast = True
 
 
+def calculate_statistics():
+    print("Calculating statistics...")
+    for player in active_connections:
+        calculate_average_response_time(player)
+        print_fastest_player()
+
 
 def send_game_over_message(winner):
+    calculate_statistics()
     if winner in active_connections:
         active_connections.remove(winner)
     output = game_over_message(winner)
@@ -142,7 +151,7 @@ def send_game_over_message(winner):
     winner_output = "Congratulations you won!"
     try:
         winner.connection.sendall(server_op_codes['server_ends_game'].to_bytes(1, byteorder='big') +
-                              bytes(winner_output, 'utf-8'))
+                                  bytes(winner_output, 'utf-8'))
     except ConnectionResetError:
         print("Error: Connection reset by peer")
     global game_on
@@ -202,12 +211,12 @@ def run_game():
             disqualified_players.remove(player)
 
         round_number += 1
-        #TODO check what happend when the questions end
-        if round_number-1 > len(qa_list):
+        # TODO check what happend when the questions end
+        if round_number - 1 > len(qa_list):
             print(blue_text("The players were very smart for the TriviaKing"))
             break
         else:
-            question = qa_list[round_number-1]
+            question = qa_list[round_number - 1]
 
     send_game_over_message(active_players[0])
 
@@ -223,6 +232,7 @@ def handle_answers(player, correct_answer):
             data = player.connection.recv(1024)
             received_answer = data[1:].decode()
             answer_flag = True
+            end_time = time.time()
             break  # Exit loop if data is received
         except socket.timeout:
             continue  # Continue looping if no data is received within timeout
@@ -240,16 +250,45 @@ def handle_answers(player, correct_answer):
         output = f"{client_name} time's up!"
         print(red_text(f"{client_name} time's up!"))
         disqualified_players.append(player)
+        end_time = start_time + 10
+
+    response_time = end_time - start_time  # Calculate the response time
+    player.response_times.append(response_time)
 
     try:
         send_tcp_message(output, server_op_codes['server_sends_message'], connection=player.connection)
     except ConnectionResetError:
         print("Error: Connection reset by peer")
 
+
+def calculate_average_response_time(player):
+    print("here")
+    total_response_time = sum(player.response_times)
+    num_questions_answered = len(player.response_times)
+    if num_questions_answered > 0:
+        average_response_time = total_response_time / num_questions_answered
+        message = avg_response_time(average_response_time)
+        print("here2")
+        try:
+            send_tcp_message(message, server_op_codes['server_sends_message'], connection=player.connection)
+        except ConnectionResetError:
+            print("Error: Connection reset by peer")
+
+    else:
+        return 0
+
+
+def print_fastest_player():
+    fastest_player = min(active_connections, key=lambda p: min(p.response_times, default=float('inf')))
+    avg_response_time = calculate_average_response_time(fastest_player)
+    return fastest_player_time(fastest_player.user_name, avg_response_time)
+
+
 def main():
     wait_for_clients()
     if len(active_connections) >= 1:
         run_game()
+
     else:
         print(yellow_text("Just one connection "))
 
