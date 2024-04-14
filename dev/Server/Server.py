@@ -6,7 +6,8 @@ import time
 from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
-    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, cyan_text, check_player_name
+    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, cyan_text, \
+    check_player_name
 
 active_connections = []  # List to store active connections
 # client_threads = []  # List to store each client's thread
@@ -47,17 +48,18 @@ def send_tcp_message(msg, op_code, connection=None):
         return
     print(cyan_text(msg))
     for p in active_connections:
-       try:
+        try:
             p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
-       except ConnectionResetError:
+        except ConnectionResetError:
             print(f"Error occurred with connection from {p.client_address}")
             remove_player(p, active_connections)
-       except ConnectionAbortedError:
-           print("Error occurred with connection from {}".format(p.client_address))
-       except BrokenPipeError:
-           print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
-           # Handle the broken connection, such as removing the player from active connections
-           active_connections.remove(p)
+        except ConnectionAbortedError:
+            print("Error occurred with connection from {}".format(p.client_address))
+        except BrokenPipeError:
+            print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
+            # Handle the broken connection, such as removing the player from active connections
+            active_connections.remove(p)
+
 
 def handle_tcp_connection(connection, client_address):
     try:
@@ -70,11 +72,10 @@ def handle_tcp_connection(connection, client_address):
             active_connections.append(Player(connection, client_address, content))
             connection.sendall(b"Your name has been submitted!")
 
-
     except Exception as e:
         print(f"Error occurred with connection from {client_address}: {e}")
 
-    #finally:
+    # finally:
     #     # Remove connection from the list of active connections
     #     del active_connections[(connection, client_address)]
     #     # Clean up the connection
@@ -129,7 +130,6 @@ def wait_for_clients():
     stop_udp_broadcast = True
 
 
-
 def send_game_over_message(winner):
     if winner in active_connections:
         active_connections.remove(winner)
@@ -142,7 +142,7 @@ def send_game_over_message(winner):
     winner_output = "Congratulations you won!"
     try:
         winner.connection.sendall(server_op_codes['server_ends_game'].to_bytes(1, byteorder='big') +
-                              bytes(winner_output, 'utf-8'))
+                                  bytes(winner_output, 'utf-8'))
     except ConnectionResetError:
         print("Error: Connection reset by peer")
     global game_on
@@ -202,12 +202,12 @@ def run_game():
             disqualified_players.remove(player)
 
         round_number += 1
-        #TODO check what happend when the questions end
-        if round_number-1 > len(qa_list):
+        # TODO check what happend when the questions end
+        if round_number - 1 > len(qa_list):
             print(blue_text("The players were very smart for the TriviaKing"))
             break
         else:
-            question = qa_list[round_number-1]
+            question = qa_list[round_number - 1]
 
     send_game_over_message(active_players[0])
 
@@ -245,6 +245,7 @@ def handle_answers(player, correct_answer):
         send_tcp_message(output, server_op_codes['server_sends_message'], connection=player.connection)
     except ConnectionResetError:
         print("Error: Connection reset by peer")
+
 
 def main():
     wait_for_clients()
