@@ -82,6 +82,7 @@ class AbstractClient(ABC):
         # Close UDP socket
         udp_socket.close()
 
+
 class Bot(AbstractClient):
     def getName(self):
         new_uuid = uuid.uuid4()
