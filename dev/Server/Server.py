@@ -6,7 +6,7 @@ import time
 from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
-    player_lost, next_round, answer_keys, check_player_name
+    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, cyan_text, check_player_name
 
 active_connections = []  # List to store active connections
 # client_threads = []  # List to store each client's thread
@@ -45,17 +45,19 @@ def send_tcp_message(msg, op_code, connection=None):
     if connection is not None:
         connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
         return
-    print(msg)
+    print(cyan_text(msg))
     for p in active_connections:
        try:
             p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
        except ConnectionResetError:
             print(f"Error occurred with connection from {p.client_address}")
-            remove_player(p.client_address, active_connections)
+            remove_player(p, active_connections)
        except ConnectionAbortedError:
            print("Error occurred with connection from {}".format(p.client_address))
-           #break
-
+       except BrokenPipeError:
+           print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
+           # Handle the broken connection, such as removing the player from active connections
+           active_connections.remove(p)
 
 def handle_tcp_connection(connection, client_address):
     try:
@@ -64,7 +66,7 @@ def handle_tcp_connection(connection, client_address):
         if check_player_name(content, active_connections):
             connection.sendall(server_op_codes['server_requests_other_name'].to_bytes(1, byteorder='big'))
         else:
-            print("Connection accepted from:", client_address)
+            print(yellow_text(f"Connection accepted from: {client_address}"))
             active_connections.append(Player(connection, client_address, content))
             connection.sendall(b"Your name has been submitted!")
 
@@ -113,7 +115,7 @@ def wait_for_clients():
     server_address = ('', 12345)  # Example port, replace with your desired port
     tcp_socket.bind(server_address)
     tcp_socket.listen(5)  # Listen for incoming connections
-    print("Server started, listening on IP address 172.1.0.4")
+    print(yellow_text("Server started, listening on IP address 172.1.0.4"))
     last_join_time = time.time()
     while time.time() - last_join_time < 10:
         tcp_socket.settimeout(10)
@@ -123,15 +125,15 @@ def wait_for_clients():
             last_join_time = time.time()
         except socket.timeout:
             break
-
     global stop_udp_broadcast
     stop_udp_broadcast = True
 
 
 
 def send_game_over_message(winner):
-    remove_player(winner.client_address, active_connections)
-    output = f"Game Over!\nCongratulations to the winner: {winner.user_name}"
+    if winner in active_connections:
+        active_connections.remove(winner)
+    output = game_over_message(winner)
     try:
         send_tcp_message(output, server_op_codes['server_ends_game'])
     except ConnectionResetError:
@@ -154,11 +156,9 @@ def players_in_game():
     return active_players
 
 
-def remove_player(client_address, active_players):
-    for player in active_players[:]:
-        if player.client_address == client_address:
-            active_players.remove(player)
-            return
+def remove_player(player, active_players):
+    if player in active_players:
+        active_players.remove(player)
 
 
 def run_game():
@@ -174,56 +174,53 @@ def run_game():
     import random
     qa_list = list(QandA.questions_and_answers.keys())
     # random.shuffle(qa_list)
+    question = qa_list[0]
     while len(active_players) > 1:
-        for question in qa_list:
-            next_round_msg = next_round(round_number, active_players)
-            try:
-                send_tcp_message(next_round_msg, server_op_codes['server_sends_message'])
-            except ConnectionResetError:
-                print("Error: Connection reset by peer")
-            client_threads = []
-            answer = QandA.questions_and_answers[question]
-            try:
-                send_tcp_message(question, server_op_codes['server_requests_input'])
-            #maybe in other place
-            except ConnectionResetError:
-                print("Error: Connection reset by peer")
-            for p in active_players:
-                client_thread = threading.Thread(target=handle_answers, args=(p.connection, p.client_address, answer))
-                client_threads.append(client_thread)
+        round_details(round_number, active_players)
+        client_threads = []
+        answer = QandA.questions_and_answers[question]
+        try:
+            send_tcp_message(question, server_op_codes['server_requests_input'])
+        except ConnectionResetError:
+            print("Error: Connection reset by peer")
+        for p in active_players:
+            client_thread = threading.Thread(target=handle_answers, args=(p, answer))
+            client_threads.append(client_thread)
 
-            for client_thread in client_threads:
-                client_thread.start()
+        for client_thread in client_threads:
+            client_thread.start()
 
-            for client_thread in client_threads:
-                client_thread.join()
+        for client_thread in client_threads:
+            client_thread.join()
 
-            # Check if all players were disqualified
-            if len(active_players) == len(disqualified_players):
-                disqualified_players = []
+        # Check if all players were disqualified
+        if len(active_players) == len(disqualified_players):
+            disqualified_players = []
 
-            for player in disqualified_players:
-                # send_tcp_message(player_lost(get_player_name(player.connection)),
-                #                  server_op_codes['server_sends_message'])
-                disqualified_players.remove(player)
-                remove_player(player, active_players)
+        for player in disqualified_players:
+            remove_player(player, active_players)
+            disqualified_players.remove(player)
 
-            round_number += 1
-            if len(active_players) == 1:
-                break
+        round_number += 1
+        #TODO check what happend when the questions end
+        if round_number-1 > len(qa_list):
+            print(blue_text("The players were very smart for the TriviaKing"))
+            break
+        else:
+            question = qa_list[round_number-1]
 
     send_game_over_message(active_players[0])
 
 
-def handle_answers(connection, client_address, correct_answer):
-    client_name = get_player_name(client_address)
+def handle_answers(player, correct_answer):
+    client_name = player.user_name
     start_time = time.time()
     answer_flag = False
     output = ''
     while time.time() - start_time <= 10:  # Check if 10 seconds have elapsed
         try:
-            connection.settimeout(10 - (time.time() - start_time))  # Set timeout for receiving data
-            data = connection.recv(1024)
+            player.connection.settimeout(10 - (time.time() - start_time))  # Set timeout for receiving data
+            data = player.connection.recv(1024)
             received_answer = data[1:].decode()
             answer_flag = True
             break  # Exit loop if data is received
@@ -233,14 +230,17 @@ def handle_answers(connection, client_address, correct_answer):
     if answer_flag:
         if received_answer == str(correct_answer):
             output = f"{client_name} is correct!"
+            print(green_text(f"{client_name} is correct!"))
         else:
             output = f"{client_name} is incorrect!"
-            disqualified_players.append(client_address)
+            print(red_text(f"{client_name} is incorrect!"))
+            disqualified_players.append(player)
 
     else:
         output = f"{client_name} time's up!"
-        disqualified_players.append(client_address)
-    print(output)
+        print(red_text(f"{client_name} time's up!"))
+        disqualified_players.append(player)
+
     try:
         send_tcp_message(output, server_op_codes['server_sends_message'], connection=connection)
     except ConnectionResetError:
@@ -251,10 +251,10 @@ def main():
     if len(active_connections) >= 1:
         run_game()
     else:
-        print("Just on connection ")
+        print(yellow_text("Just one connection "))
 
 
-#         TODO need to change after implementing the bot
+# TODO need to change after implementing the bot
 
 if __name__ == "__main__":
     main()

@@ -40,11 +40,19 @@ def game_welcome_message(server_name, subject):
     return f"Welcome to the {server_name} server, where we are answering trivia questions about {subject}."
 
 
-def next_round(round_number, active_players):
+def round_details(round_number, active_players):
     output = f"Round {round_number}, played by {active_players[0].user_name}"
     for active_player in active_players[1:]:
         output += f" and {active_player.user_name}"
-    return output
+    print(yellow_text(output))
+
+
+def game_over_message(winner_name):
+    return f"Game Over!\nCongratulations to the winner: {winner_name.user_name} \n"
+
+
+def game_winner():
+    return "Congratulations you won!"
 
 
 def player_lost(player_name):
@@ -55,12 +63,27 @@ def player_is_correct(player_name):
     return f"{player_name} is correct!"
 
 
-def player_is_incorrect(player_name):
-    return f"{player_name} is incorrect!"
-
-
 def player_times_up(player_name):
     return f"{player_name} times up!"
+
+
+def red_text(text):
+    return "\033[1;31m" + text + "\033[0m"
+
+
+def green_text(text):
+    return "\033[1;32m" + text + "\033[0m"
+
+def cyan_text(text):
+    return "\033[1;36;40m" + text + "\033[0m"
+
+def blue_text(text):
+    return "\033[1;34m" + text + "\033[0m"
+
+
+def yellow_text(text):
+    return "\033[1;33m" + text + "\033[0m"
+
 
 def check_player_name(player_name, active_players):
     for active_player in active_players:
