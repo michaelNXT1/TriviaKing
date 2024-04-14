@@ -242,7 +242,7 @@ def handle_answers(player, correct_answer):
         disqualified_players.append(player)
 
     try:
-        send_tcp_message(output, server_op_codes['server_sends_message'], connection=connection)
+        send_tcp_message(output, server_op_codes['server_sends_message'], connection=player.connection)
     except ConnectionResetError:
         print("Error: Connection reset by peer")
 
