@@ -132,10 +132,15 @@ def wait_for_clients():
 
 
 def calculate_statistics():
-    print("Calculating statistics...")
+    print(yellow_text("Calculating statistics..."))
     for player in active_connections:
-        calculate_average_response_time(player)
-        print_fastest_player()
+        avg_time_msg = avg_response_time(calculate_average_response_time(player))
+        try:
+            send_tcp_message(avg_time_msg, server_op_codes['server_sends_message'], player.connection)
+        except ConnectionResetError:
+            print("Error: Connection reset by peer")
+
+    print_fastest_player()
 
 
 def send_game_over_message(winner):
@@ -158,11 +163,10 @@ def send_game_over_message(winner):
     game_on = False
 
 
-def players_in_game():
-    active_players = []
-    for player in active_connections:
-        active_players.append(player)
-    return active_players
+def add_response_time(player, response_time):
+    for p in active_connections:
+        if p.user_name == player.user_name:
+            p.response_times.append(response_time)
 
 
 def remove_player(player, active_players):
@@ -253,7 +257,8 @@ def handle_answers(player, correct_answer):
         end_time = start_time + 10
 
     response_time = end_time - start_time  # Calculate the response time
-    player.response_times.append(response_time)
+    # player.response_times.append(response_time)
+    add_response_time(player, response_time)
 
     try:
         send_tcp_message(output, server_op_codes['server_sends_message'], connection=player.connection)
@@ -262,26 +267,23 @@ def handle_answers(player, correct_answer):
 
 
 def calculate_average_response_time(player):
-    print("here")
     total_response_time = sum(player.response_times)
     num_questions_answered = len(player.response_times)
     if num_questions_answered > 0:
         average_response_time = total_response_time / num_questions_answered
-        message = avg_response_time(average_response_time)
-        print("here2")
-        try:
-            send_tcp_message(message, server_op_codes['server_sends_message'], connection=player.connection)
-        except ConnectionResetError:
-            print("Error: Connection reset by peer")
-
+        return average_response_time
     else:
         return 0
 
 
 def print_fastest_player():
-    fastest_player = min(active_connections, key=lambda p: min(p.response_times, default=float('inf')))
-    avg_response_time = calculate_average_response_time(fastest_player)
-    return fastest_player_time(fastest_player.user_name, avg_response_time)
+    fastest_player = min(active_connections, key=lambda p: calculate_average_response_time(p))
+    if fastest_player:
+        fastest_player_name = fastest_player.user_name
+        fastest_avg_time = calculate_average_response_time(fastest_player)
+        return fastest_player_time(fastest_player_name, fastest_avg_time)
+    else:
+        return None
 
 
 def main():
