@@ -23,7 +23,8 @@ server_op_codes = dict(
     server_sends_message=0x00,
     server_requests_input=0x01,
     server_ends_game=0x02,
-    server_requests_other_name=0x03
+    server_requests_other_name=0x03,
+    server_check_connection=0x04
 )
 
 answer_keys = {
@@ -41,10 +42,11 @@ def game_welcome_message(server_name, subject):
 
 
 def round_details(round_number, active_players):
-    output = f"Round {round_number}, played by {active_players[0].user_name}"
-    for active_player in active_players[1:]:
-        output += f" and {active_player.user_name}"
-    print(yellow_text(output))
+    if len(active_players)>=1:
+        output = f"Round {round_number}, played by {active_players[0].user_name}"
+        for active_player in active_players[1:]:
+            output += f" and {active_player.user_name}"
+        print(yellow_text(output))
 
 
 def game_over_message(winner_name):
@@ -90,3 +92,17 @@ def check_player_name(player_name, active_players):
         if active_player.user_name == player_name:
             return True
     return False
+
+def get_player_by_clinent_adrres(client_addres, active_players):
+    for active_player in active_players:
+        if active_player.client_address == client_addres:
+            return active_player
+
+def intersection_lists(active_players, active_connections):
+    new_active_players = []
+    for active_player in active_players:
+        for active_connection in active_connections:
+            if active_player.user_name == active_connection.user_name:
+                new_active_players.append(active_player)
+                break  # Exit inner loop after finding a match
+    active_players[:] = new_active_players

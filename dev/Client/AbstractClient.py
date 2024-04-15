@@ -21,7 +21,7 @@ class AbstractClient(ABC):
     def receive_offer_broadcast(self):
         # Create UDP socket
         udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # Set SO_REUSEPORT option
+        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Set SO_REUSEPORT option
         udp_socket.bind(('0.0.0.0', client_consts['server_port']))
 
         # Receive UDP broadcast
@@ -39,8 +39,12 @@ class AbstractClient(ABC):
 
             user_name = self.getName()
             # Establish TCP connection
-            tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tcp_socket.connect((addr[0], server_port))
+            try:
+                tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcp_socket.connect((addr[0], server_port))
+            except ConnectionRefusedError:
+                print("Connection refused")
+                exit()
 
             try:
                 # Send success message over TCP
@@ -53,9 +57,11 @@ class AbstractClient(ABC):
                     except ConnectionResetError:
                         print("Connection reset by remote host. Reconnecting...")
                         break
+                    except KeyboardInterrupt:
+                        break
                     op_code = int.from_bytes(data[:1], byteorder='big')
                     content = data[1:].decode()
-                    if op_code == server_op_codes['server_sends_message']:
+                    if op_code == server_op_codes['server_sends_message'] :
                         print('Message from Server: ' + content)
                     elif op_code == server_op_codes['server_ends_game']:
                         print(content)
@@ -63,6 +69,7 @@ class AbstractClient(ABC):
                         break
                     elif op_code == server_op_codes['server_requests_input']:
                         print('Question from Server: ' + content)
+
                         answer = self.getAnswer()
                         self.send_message(tcp_socket,answer, client_op_codes['client_sends_answer'])
                     elif op_code == server_op_codes['server_requests_other_name']:
@@ -71,6 +78,8 @@ class AbstractClient(ABC):
                         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         tcp_socket.connect((addr[0], server_port))
                         self.send_message(tcp_socket, user_name, client_op_codes['client_sends_name'])
+                    elif op_code == server_op_codes['server_check_connection']:
+                        continue
                     else:
                         print('successfully connected')
             finally:
