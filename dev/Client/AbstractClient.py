@@ -21,7 +21,7 @@ class AbstractClient(ABC):
     def receive_offer_broadcast(self):
         # Create UDP socket
         udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Set SO_REUSEPORT option
+        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # Set SO_REUSEPORT option
         udp_socket.bind(('0.0.0.0', client_consts['server_port']))
 
         # Receive UDP broadcast

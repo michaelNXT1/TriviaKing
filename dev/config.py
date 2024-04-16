@@ -110,9 +110,9 @@ def check_player_name(player_name, active_players):
     return False
 
 
-def get_player_by_clinent_adrres(client_addres, active_players):
-    for active_player in active_players:
-        if active_player.client_address == client_addres:
+def get_player_by_connection(connection, active_connection):
+    for active_player in active_connection:
+        if active_player.connection == connection:
             return active_player
 
 
