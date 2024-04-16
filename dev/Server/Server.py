@@ -7,7 +7,7 @@ from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
     round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, cyan_text, \
-    check_player_name, fastest_player_time, avg_response_time
+    check_player_name, fastest_player_time, avg_response_time, print_table
 
 active_connections = []  # List to store active connections
 # client_threads = []  # List to store each client's thread
@@ -188,6 +188,10 @@ def run_game():
     qa_list = list(QandA.questions_and_answers.keys())
     # random.shuffle(qa_list)
     question = qa_list[0]
+
+    num_rounds = len(qa_list)
+    player_responses = {p.user_name: ['' for _ in range(num_rounds)] for p in active_players}
+
     while len(active_players) > 1:
         round_details(round_number, active_players)
         client_threads = []
@@ -210,9 +214,19 @@ def run_game():
         if len(active_players) == len(disqualified_players):
             disqualified_players = []
 
+        # Update player_responses based on active_players
+        for user_name in [p.user_name for p in active_players]:
+            player = next((p for p in active_players if p.user_name == user_name), None)
+            if player and player not in disqualified_players:
+                player_responses[user_name][round_number - 1] = 'v'
+            else:
+                player_responses[user_name][round_number - 1] = 'x'
+
         for player in disqualified_players:
             remove_player(player, active_players)
             disqualified_players.remove(player)
+
+
 
         round_number += 1
         # TODO check what happend when the questions end
@@ -223,6 +237,7 @@ def run_game():
             question = qa_list[round_number - 1]
 
     send_game_over_message(active_players[0])
+    print_table(player_responses, round_number)
 
 
 def handle_answers(player, correct_answer):
@@ -286,10 +301,12 @@ def print_fastest_player():
         return None
 
 
+
 def main():
     wait_for_clients()
     if len(active_connections) >= 1:
         run_game()
+
 
     else:
         print(yellow_text("Just one connection "))

@@ -68,7 +68,8 @@ def player_times_up(player_name):
 
 
 def fastest_player_time(player_name, avg_response_time):
-    print(blue_text(f"Fastest Player in TriviaKing: {player_name} with Average Response Time: {avg_response_time} seconds"))
+    print(blue_text(
+        f"Fastest Player in TriviaKing: {player_name} with Average Response Time: {avg_response_time} seconds"))
 
 
 def avg_response_time(avg_time):
@@ -101,3 +102,45 @@ def check_player_name(player_name, active_players):
         if active_player.user_name == player_name:
             return True
     return False
+
+
+def print_table(player_responses, round_num):
+    num_rounds = round_num
+    num_players = len(player_responses)
+
+    # Calculate the width of each cell
+    cell_width = 10  # Adjust this value based on your content width
+
+    # Print top border
+    print("┌", end="")
+    for _ in range(num_rounds):
+        print("─" * (cell_width + 2) + "┬", end="")
+    print("─" * (cell_width + 2) + "┐")
+
+    # Print headers
+    print("│".rjust(cell_width), end="")
+    for i in range(1, num_rounds + 1):
+        print(f" Round {i} ".center(cell_width), end="│")
+    print()
+
+    # Print middle border
+    print("├", end="")
+    for _ in range(num_rounds):
+        print("─" * (cell_width + 2) + "┼", end="")
+    print("─" * (cell_width + 2) + "┤")
+
+    # Print player rows
+    for user_name, responses in player_responses.items():
+        print(f"│ {user_name.ljust(cell_width)}", end="")
+        for response in responses:
+            print(f" {response.center(cell_width)} ", end="│")
+        print()
+
+    # Print bottom border
+    print("└", end="")
+    for _ in range(num_rounds):
+        print("─" * (cell_width + 2) + "┴", end="")
+    print("─" * (cell_width + 2) + "┘")
+
+
+
