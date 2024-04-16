@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import socket
-from dev.config import client_consts, general, client_op_codes, server_op_codes, answer_keys
+from dev.config import client_consts, general, client_op_codes, server_op_codes, answer_keys , red_text, blue_text, yellow_text ,pink_text, green_text
 import random
 import uuid
 class AbstractClient(ABC):
@@ -35,7 +35,7 @@ class AbstractClient(ABC):
 
         # Check if the received message is an offer
         if magic_cookie == client_consts['magic_cookie'] and message_type == client_consts['message_type']:
-            print(f'Received offer from server “{server_name}” at address {addr[0]}, attempting to connect...')
+            print(blue_text(f'Received offer from server “{server_name}” at address {addr[0]}, attempting to connect...'))
 
             user_name = self.getName()
             # Establish TCP connection
@@ -43,7 +43,7 @@ class AbstractClient(ABC):
                 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 tcp_socket.connect((addr[0], server_port))
             except ConnectionRefusedError:
-                print("Connection refused")
+                print(red_text("Connection refused"))
                 exit()
 
             try:
@@ -55,25 +55,24 @@ class AbstractClient(ABC):
                     try:
                         data = tcp_socket.recv(1024)
                     except ConnectionResetError:
-                        print("Connection reset by remote host. Reconnecting...")
+                        print(red_text("Connection reset by remote host. Reconnecting..."))
                         break
                     except KeyboardInterrupt:
                         break
                     op_code = int.from_bytes(data[:1], byteorder='big')
                     content = data[1:].decode()
                     if op_code == server_op_codes['server_sends_message'] :
-                        print('Message from Server: ' + content)
+                        print(blue_text('Message from Server: ' + content))
                     elif op_code == server_op_codes['server_ends_game']:
                         print(content)
                         # print("Game over")
                         break
                     elif op_code == server_op_codes['server_requests_input']:
-                        print('Question from Server: ' + content)
-
+                        print(pink_text('Question from Server: ' + content))
                         answer = self.getAnswer()
                         self.send_message(tcp_socket,answer, client_op_codes['client_sends_answer'])
                     elif op_code == server_op_codes['server_requests_other_name']:
-                        print("Your name is in use by someone else, please try again")
+                        print(red_text("Your name is in use by someone else, please try again"))
                         user_name = self.getName()
                         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         tcp_socket.connect((addr[0], server_port))
@@ -81,12 +80,12 @@ class AbstractClient(ABC):
                     elif op_code == server_op_codes['server_check_connection']:
                         continue
                     else:
-                        print('successfully connected')
+                        print(green_text('successfully connected'))
             finally:
                 # Close TCP connection
                 tcp_socket.close()
                 # check this
-                print("Server disconnected, listening for offer requests...")
+                print(red_text("Server disconnected, listening for offer requests..."))
 
         # Close UDP socket
         udp_socket.close()
@@ -100,7 +99,7 @@ class Bot(AbstractClient):
         # Convert hexadecimal string to integer
         uuid_as_number = int(hex_string, 16)
         user_name = f"BOT{uuid_as_number}"
-        print(f"Bot name: {user_name}")
+        print(yellow_text(f"Bot name: {user_name}"))
         return user_name
 
     def getAnswer(self):
@@ -112,10 +111,10 @@ class Bot(AbstractClient):
 class Client(AbstractClient):
     def getName(self):
         try:
-            user_name = input("Please enter your name: ")
+            user_name = input(yellow_text("Please enter your name: "))
             return user_name
         except KeyboardInterrupt:
-            print("program stop when wait to name")
+            print(red_text("program stop when wait to name"))
             exit()
 
     def getAnswer(self):
@@ -129,5 +128,5 @@ class Client(AbstractClient):
                     answer = answer_keys[user_input]
                     return answer
         except KeyboardInterrupt:
-            print("program stop when wait to answer")
+            print(red_text("program stop when wait to answer"))
             exit()

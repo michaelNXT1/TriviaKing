@@ -86,6 +86,8 @@ def blue_text(text):
 def yellow_text(text):
     return "\033[1;33m" + text + "\033[0m"
 
+def pink_text(text):
+    return "\033[95m" + text + "\033[0m"
 
 def check_player_name(player_name, active_players):
     for active_player in active_players:
@@ -106,3 +108,5 @@ def intersection_lists(active_players, active_connections):
                 new_active_players.append(active_player)
                 break  # Exit inner loop after finding a match
     active_players[:] = new_active_players
+
+

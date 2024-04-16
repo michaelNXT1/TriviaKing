@@ -149,6 +149,8 @@ def send_game_over_message(winner):
                               bytes(winner_output, 'utf-8'))
     except ConnectionResetError:
         print("Error: Connection reset by peer")
+    except ConnectionAbortedError:
+        print("Error: Connection reset by peer")
     global game_on
     game_on = False
 
@@ -208,8 +210,8 @@ def run_game():
         for player in disqualified_players:
             remove_player(player, active_players)
             disqualified_players.remove(player)
-
-        intersection_lists(active_players,active_connections)
+        send_tcp_message('', server_op_codes['server_check_connection'])
+        intersection_lists(active_players, active_connections)
         round_number += 1
         #TODO check what happend when the questions end
         if round_number-1 > len(qa_list):
@@ -236,6 +238,8 @@ def handle_answers(player, correct_answer):
             except ConnectionAbortedError:
                  print("Error: Connection aborted by peer")
                  exit()
+            except ConnectionResetError:
+                print("Error: Connection aborted by peer")
             answer_flag = True
             break  # Exit loop if data is received
         except socket.timeout:
