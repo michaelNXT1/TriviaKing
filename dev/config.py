@@ -131,7 +131,7 @@ def print_table(player_responses, round_num):
     num_players = len(player_responses)
 
     # Calculate the width of each cell
-    cell_width = 10  # Adjust this value based on your content width
+    cell_width = 20  # Adjust this value based on your content width
 
     # Print top border
     print("┌", end="")
@@ -155,11 +155,16 @@ def print_table(player_responses, round_num):
     for user_name, responses in player_responses.items():
         print(f"│ {user_name.ljust(cell_width)}", end="")
         for response in responses:
-            print(f" {response.center(cell_width)} ", end="│")
-        print()
+            print(f" {response.center(cell_width)} ", end="")
+        # Fill remaining empty cells
+        for _ in range(num_rounds - len(responses)):
+            print(" " * (cell_width + 2), end="")
+        print("│")
 
     # Print bottom border
     print("└", end="")
     for _ in range(num_rounds):
         print("─" * (cell_width + 2) + "┴", end="")
     print("─" * (cell_width + 2) + "┘")
+
+

@@ -147,17 +147,19 @@ def calculate_statistics():
             send_tcp_message(avg_time_msg, server_op_codes['server_sends_message'], player.connection)
         except ConnectionResetError:
             print("Error: Connection reset by peer")
+        except BrokenPipeError:
+            print(f"BrokenPipeError: Connection closed unexpectedly {player.client_address}")
 
     print_fastest_player()
 
 
 def send_game_over_message(winner):
-    calculate_statistics()
-    if winner in active_connections:
-        active_connections.remove(winner)
+    # if winner in active_connections:
+    #     active_connections.remove(winner)
     output = game_over_message(winner)
     try:
         send_tcp_message(output, server_op_codes['server_ends_game'])
+        calculate_statistics()
     except ConnectionResetError:
         remove_player(winner.client_address, active_connections)
         print("Error: Connection reset by peer")
