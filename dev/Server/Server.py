@@ -48,7 +48,7 @@ def send_tcp_message(msg, op_code, connection=None):
     print(cyan_text(msg))
     for p in active_connections:
        try:
-            p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
+           p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
        except ConnectionResetError:
             print(f"Error occurred with connection from {p.client_address}")
             remove_player(p, active_connections)
@@ -219,7 +219,7 @@ def run_game():
             break
         else:
             question = qa_list[round_number-1]
-    if len(active_players)>=1:
+    if len(active_players) >= 1:
         send_game_over_message(active_players[0])
 
 
@@ -256,7 +256,8 @@ def handle_answers(player, correct_answer):
 
     else:
         output = f"{client_name} time's up!"
-        print(red_text(f"{client_name} time's up!"))
+        print(red_text(output))
+        send_tcp_message(output, 0x00, player.connection)
         disqualified_players.append(player)
 
     try:
