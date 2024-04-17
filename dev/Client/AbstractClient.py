@@ -63,6 +63,7 @@ class AbstractClient(ABC):
                         break
                     elif op_code == server_op_codes['server_requests_input']:
                         print('Question from Server: ' + content)
+
                         answer = self.getAnswer()
                         self.send_message(tcp_socket,answer, client_op_codes['client_sends_answer'])
                     elif op_code == server_op_codes['server_requests_other_name']:
