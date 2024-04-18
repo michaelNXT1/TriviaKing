@@ -87,10 +87,6 @@ def green_text(text):
     return "\033[1;32m" + text + "\033[0m"
 
 
-def cyan_text(text):
-    return "\033[1;36;40m" + text + "\033[0m"
-
-
 def blue_text(text):
     return "\033[1;34m" + text + "\033[0m"
 
@@ -127,7 +123,7 @@ def intersection_lists(active_players, active_connections):
 
 
 def print_table(player_responses, round_num):
-    num_rounds = round_num
+    num_rounds = round_num - 1
     num_players = len(player_responses)
 
     # Calculate the width of each cell
@@ -140,9 +136,9 @@ def print_table(player_responses, round_num):
     print("─" * (cell_width + 2) + "┐")
 
     # Print headers
-    print("│".rjust(cell_width), end="")
+    print("│".ljust(cell_width + 3), end="│")
     for i in range(1, num_rounds + 1):
-        print(f" Round {i} ".center(cell_width), end="│")
+        print(f" Round {i} ".center(cell_width + 2), end="│")
     print()
 
     # Print middle border
@@ -153,9 +149,9 @@ def print_table(player_responses, round_num):
 
     # Print player rows
     for user_name, responses in player_responses.items():
-        print(f"│ {user_name.ljust(cell_width)}", end="")
-        for response in responses:
-            print(f" {response.center(cell_width)} ", end="│")
+        print(f"│ {user_name.ljust(cell_width +1)}", end="│")
+        for i in range(num_rounds):
+            print(f" {responses[i].center(cell_width + 11)} ", end="│")
         print()
 
     # Print bottom border
