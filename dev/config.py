@@ -123,39 +123,49 @@ def intersection_lists(active_players, active_connections):
 
 
 def print_table(player_responses, round_num):
+
     num_rounds = round_num - 1
     num_players = len(player_responses)
+    max_player_name_length = max(len(key) for key in player_responses.keys())
 
     # Calculate the width of each cell
     cell_width = 10  # Adjust this value based on your content width
 
     # Print top border
     print("┌", end="")
-    for _ in range(num_rounds):
+    print("─" * (max_player_name_length + 2) + "┬", end="")
+    for _ in range(num_rounds - 1):
         print("─" * (cell_width + 2) + "┬", end="")
     print("─" * (cell_width + 2) + "┐")
 
     # Print headers
-    print("│".ljust(cell_width + 3), end="│")
+    print("│".ljust(max_player_name_length + 3), end="│")
     for i in range(1, num_rounds + 1):
         print(f" Round {i} ".center(cell_width + 2), end="│")
     print()
 
     # Print middle border
     print("├", end="")
-    for _ in range(num_rounds):
+    print("─" * (max_player_name_length + 2) + "┼", end="")
+    for _ in range(num_rounds - 1):
         print("─" * (cell_width + 2) + "┼", end="")
     print("─" * (cell_width + 2) + "┤")
 
+
+
     # Print player rows
     for user_name, responses in player_responses.items():
-        print(f"│ {user_name.ljust(cell_width +1)}", end="│")
+        print(f"│ {user_name.ljust(max_player_name_length + 1)}", end="│")
         for i in range(num_rounds):
-            print(f" {responses[i].center(cell_width + 11)} ", end="│")
+            if responses[i] is None or responses[i] == '':
+                print(f" {'Fail'.center(cell_width - 1)} ", end="│")
+            else:
+                print(f" {responses[i].center(cell_width + 11)} ", end="│")
         print()
 
     # Print bottom border
     print("└", end="")
-    for _ in range(num_rounds):
+    print("─" * (max_player_name_length + 2) + "┴", end="")
+    for _ in range(num_rounds - 1):
         print("─" * (cell_width + 2) + "┴", end="")
     print("─" * (cell_width + 2) + "┘")

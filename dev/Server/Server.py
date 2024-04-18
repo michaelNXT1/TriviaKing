@@ -77,7 +77,7 @@ def handle_tcp_connection(connection, client_address):
             connection.sendall(server_op_codes['server_requests_other_name'].to_bytes(1, byteorder='big'))
             return False
         else:
-            print(yellow_text(f"Connection accepted from: {client_address}"))
+            print(yellow_text(f"Connection accepted from: {client_address}, named {content}"))
             active_connections.append(Player(connection, client_address, content))
             connection.sendall(b"Your name has been submitted!")
             return True
@@ -235,7 +235,8 @@ def run_game():
         client_threads = []
         answer = QandA.questions_and_answers[question]
         try:
-            send_tcp_message(question, server_op_codes['server_requests_input'])
+            for player in active_players:
+                send_tcp_message(question, server_op_codes['server_requests_input'], player.connection)
         except ConnectionResetError:
             print("Error: Connection reset by peer")
         for p in active_players:
@@ -256,14 +257,14 @@ def run_game():
         for user_name in [p.user_name for p in active_players]:
             player = next((p for p in active_players if p.user_name == user_name), None)
             if player and player not in disqualified_players:
-                player_responses[user_name][round_number - 1] = green_text('v')
+                player_responses[user_name][round_number - 1] = green_text('✔')
             else:
-                player_responses[user_name][round_number - 1] = red_text('x')
+                player_responses[user_name][round_number - 1] = red_text('✘')
 
         for player in disqualified_players:
             remove_player(player, active_players)
-            disqualified_players.remove(player)
 
+        disqualified_players = []
         round_number += 1
         # TODO check what happend when the questions end
         if round_number - 1 > len(qa_list):
@@ -306,7 +307,6 @@ def handle_answers(player, correct_answer):
             continue  # Continue looping if no data is received within timeout
 
     if answer_flag:
-        print(received_answer)
         if received_answer == str(correct_answer):
             output = f"{client_name} is correct!"
             print(green_text(f"{client_name} is correct!"))
