@@ -30,7 +30,12 @@ class AbstractClient(ABC):
         udp_socket.bind(('0.0.0.0', client_consts['server_port']))
 
         # Receive UDP broadcast
-        data, addr = udp_socket.recvfrom(general['buffer_size'])
+        try:
+            data, addr = udp_socket.recvfrom(general['buffer_size'])
+
+        except KeyboardInterrupt:
+            print(red_text("program stop when wait for UDP connection"))
+            exit()
 
         # Parse received data
         magic_cookie = int.from_bytes(data[:4], byteorder='big')
@@ -67,12 +72,14 @@ class AbstractClient(ABC):
                         break
                     op_code = int.from_bytes(data[:1], byteorder='big')
                     content = data[1:].decode()
+                    if len(data) == 0:
+                        print(red_text("Connection closed by remote host"))
+                        break
                     print(data)
                     if op_code == server_op_codes['server_sends_message']:
                         print(blue_text('Message from Server: ' + content))
                     elif op_code == server_op_codes['server_ends_game']:
                         print(content)
-                        # print("Game over")
                         break
                     elif op_code == server_op_codes['server_requests_input']:
                         threading.Thread(target=self.return_answer, args=(content, tcp_socket)).start()
@@ -88,6 +95,10 @@ class AbstractClient(ABC):
                     #     continue
                     else:
                         print(green_text('successfully connected'))
+
+            except ConnectionRefusedError:
+                print(red_text("Connection refused"))
+                exit()
             finally:
                 # Close TCP connection
                 tcp_socket.close()
@@ -128,7 +139,7 @@ class Client(AbstractClient):
             user_name = input(yellow_text("Please enter your name: "))
             return user_name
         except KeyboardInterrupt:
-            print(red_text("program stop when wait to name"))
+            print(red_text("\nProgram stop when wait to name"))
             exit()
 
     def getAnswer(self):
