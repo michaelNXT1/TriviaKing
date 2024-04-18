@@ -6,12 +6,11 @@ import time
 from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
-    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, \
+    round_details, game_over_message, blue_text, green_text, red_text, yellow_text, \
     check_player_name, fastest_player_time, avg_response_time, print_table, get_player_by_clinent_adrres, \
     intersection_lists
 
 active_connections = []  # List to store active connections
-# client_threads = []  # List to store each client's thread
 stop_udp_broadcast = False
 server_name = "TeamMysticServer"
 disqualified_players = []
@@ -81,7 +80,6 @@ def handle_tcp_connection(connection, client_address):
             active_connections.append(Player(connection, client_address, content))
             connection.sendall(b"Your name has been submitted!")
             return True
-
 
     except Exception as e:
         print(f"Error occurred with connection from {client_address}: {e}")
@@ -276,7 +274,7 @@ def run_game():
 
         disqualified_players = []
         round_number += 1
-        # TODO check what happend when the questions end
+        # TODO check what happened when the questions end
         if round_number - 1 > len(qa_list):
             print(blue_text("The players were very smart for the TriviaKing"))
             break
