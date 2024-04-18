@@ -7,7 +7,8 @@ from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
     round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, cyan_text, \
-    check_player_name, fastest_player_time, avg_response_time, print_table, get_player_by_clinent_adrres
+    check_player_name, fastest_player_time, avg_response_time, print_table, get_player_by_clinent_adrres, \
+    intersection_lists
 
 active_connections = []  # List to store active connections
 # client_threads = []  # List to store each client's thread
@@ -44,8 +45,12 @@ def send_offer_broadcast():
 
 def send_tcp_message(msg, op_code, connection=None):
     if connection is not None:
-        connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
-        return
+        try:
+            connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
+            return
+        except BrokenPipeError:
+            print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
+            # TODO: Handle the broken connection, such as removing the player from active connections
     print(cyan_text(msg))
     for p in active_connections:
         try:
@@ -77,7 +82,7 @@ def handle_tcp_connection(connection, client_address):
     except Exception as e:
         print(f"Error occurred with connection from {client_address}: {e}")
         player = get_player_by_clinent_adrres(client_address, active_connections)
-        remove_player(player,active_connections)
+        remove_player(player, active_connections)
         exit()
 
     # finally:
@@ -146,13 +151,14 @@ def calculate_statistics():
 
     print_fastest_player()
 
+
 def send_game_over_message(winner):
-    calculate_statistics()
     if winner in active_connections:
         active_connections.remove(winner)
     output = game_over_message(winner)
     try:
         send_tcp_message(output, server_op_codes['server_ends_game'])
+        calculate_statistics()
     except ConnectionResetError:
         remove_player(winner.client_address, active_connections)
         print("Error: Connection reset by peer")
@@ -164,6 +170,10 @@ def send_game_over_message(winner):
         print("Error: Connection reset by peer")
     except ConnectionAbortedError:
         print("Error: Connection reset by peer")
+    except BrokenPipeError:
+        print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
+        # TODO: Handle the broken connection, such as removing the player from active connections
+
     global game_on
     game_on = False
 
@@ -174,11 +184,9 @@ def add_response_time(player, response_time):
             p.response_times.append(response_time)
 
 
-
 def remove_player(player, active_players):
     if player in active_players:
         active_players.remove(player)
-
 
 
 def run_game():
@@ -231,11 +239,13 @@ def run_game():
             else:
                 player_responses[user_name][round_number - 1] = 'x'
 
+        send_tcp_message('', server_op_codes['server_check_connection'])
+        intersection_lists(active_players, active_connections)
+
         for player in disqualified_players:
             remove_player(player, active_players)
             disqualified_players.remove(player)
-        send_tcp_message('', server_op_codes['server_check_connection'])
-        intersection_lists(active_players, active_connections)
+
         round_number += 1
         # TODO check what happend when the questions end
         if round_number - 1 > len(qa_list):
@@ -246,7 +256,6 @@ def run_game():
 
     send_game_over_message(active_players[0])
     print_table(player_responses, round_number)
-
 
 
 def handle_answers(player, correct_answer):
@@ -261,8 +270,8 @@ def handle_answers(player, correct_answer):
                 data = player.connection.recv(1024)
                 received_answer = data[1:].decode()
             except ConnectionAbortedError:
-                 print("Error: Connection aborted by peer")
-                 exit()
+                print("Error: Connection aborted by peer")
+                exit()
             except ConnectionResetError:
                 print("Error: Connection aborted by peer")
             answer_flag = True
@@ -319,8 +328,6 @@ def print_fastest_player():
         return fastest_player_time(fastest_player_name, fastest_avg_time)
     else:
         return None
-
-
 
 
 def main():

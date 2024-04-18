@@ -1,12 +1,15 @@
 import threading
 from abc import ABC, abstractmethod
 import socket
-from dev.config import client_consts, general, client_op_codes, server_op_codes, answer_keys , red_text, blue_text, yellow_text ,pink_text, green_text
+from dev.config import client_consts, general, client_op_codes, server_op_codes, answer_keys, red_text, blue_text, \
+    yellow_text, pink_text, green_text
 import random
 import uuid
 from inputimeout import inputimeout, TimeoutOccurred
+
+
 class AbstractClient(ABC):
-    def send_message(self,sock, msg, op_code=0x00):
+    def send_message(self, sock, msg, op_code=0x00):
         if not isinstance(msg, str):
             msg = str(msg)
             # Encode the string message and send it
@@ -37,7 +40,8 @@ class AbstractClient(ABC):
 
         # Check if the received message is an offer
         if magic_cookie == client_consts['magic_cookie'] and message_type == client_consts['message_type']:
-            print(blue_text(f'Received offer from server “{server_name}” at address {addr[0]}, attempting to connect...'))
+            print(
+                blue_text(f'Received offer from server “{server_name}” at address {addr[0]}, attempting to connect...'))
 
             user_name = self.getName()
             # Establish TCP connection
@@ -50,7 +54,7 @@ class AbstractClient(ABC):
 
             try:
                 # Send success message over TCP
-                self.send_message(tcp_socket,user_name, client_op_codes['client_sends_name'])
+                self.send_message(tcp_socket, user_name, client_op_codes['client_sends_name'])
                 # Continuously prompt user for input until "QUIT" is entered
                 while True:
                     # Receive response from server
@@ -63,7 +67,8 @@ class AbstractClient(ABC):
                         break
                     op_code = int.from_bytes(data[:1], byteorder='big')
                     content = data[1:].decode()
-                    if op_code == server_op_codes['server_sends_message'] :
+                    print(data)
+                    if op_code == server_op_codes['server_sends_message']:
                         print(blue_text('Message from Server: ' + content))
                     elif op_code == server_op_codes['server_ends_game']:
                         print(content)
@@ -79,6 +84,8 @@ class AbstractClient(ABC):
                         self.send_message(tcp_socket, user_name, client_op_codes['client_sends_name'])
                     elif op_code == server_op_codes['server_check_connection']:
                         continue
+                    # elif op_code == server_op_codes['']:
+                    #     continue
                     else:
                         print(green_text('successfully connected'))
             finally:
@@ -114,6 +121,7 @@ class Bot(AbstractClient):
         print('Bot generated random answer: ' + str(answer_keys[random_answer]))
         return answer_keys[random_answer]
 
+
 class Client(AbstractClient):
     def getName(self):
         try:
@@ -127,7 +135,7 @@ class Client(AbstractClient):
         try:
             valid_answer = False
             while not valid_answer:
-                user_input = inputimeout(prompt='please enter your answer: ', timeout=10).upper() #TODO: use constant
+                user_input = inputimeout(prompt='please enter your answer: ', timeout=10).upper()  # TODO: use constant
                 if user_input in answer_keys.keys():
                     valid_answer = True
                     answer = answer_keys[user_input]
