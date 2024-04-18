@@ -6,7 +6,7 @@ import time
 from dev import QandA
 from dev.Server.Player import Player
 from dev.config import server_op_codes, game_welcome_message, server_consts, \
-    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, cyan_text, \
+    round_details, game_over_message, game_winner, blue_text, green_text, red_text, yellow_text, \
     check_player_name, fastest_player_time, avg_response_time, print_table, get_player_by_clinent_adrres, \
     intersection_lists
 
@@ -51,7 +51,7 @@ def send_tcp_message(msg, op_code, connection=None):
         except BrokenPipeError:
             print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
             # TODO: Handle the broken connection, such as removing the player from active connections
-    print(cyan_text(msg))
+    print(blue_text(msg))
     for p in active_connections:
         try:
             p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
@@ -153,12 +153,12 @@ def calculate_statistics():
 
 
 def send_game_over_message(winner):
+    calculate_statistics()
     if winner in active_connections:
         active_connections.remove(winner)
     output = game_over_message(winner)
     try:
         send_tcp_message(output, server_op_codes['server_ends_game'])
-        calculate_statistics()
     except ConnectionResetError:
         remove_player(winner.client_address, active_connections)
         print("Error: Connection reset by peer")
@@ -235,9 +235,9 @@ def run_game():
         for user_name in [p.user_name for p in active_players]:
             player = next((p for p in active_players if p.user_name == user_name), None)
             if player and player not in disqualified_players:
-                player_responses[user_name][round_number - 1] = 'v'
+                player_responses[user_name][round_number - 1] = green_text('v')
             else:
-                player_responses[user_name][round_number - 1] = 'x'
+                player_responses[user_name][round_number - 1] = red_text('x')
 
         send_tcp_message('', server_op_codes['server_check_connection'])
         intersection_lists(active_players, active_connections)
