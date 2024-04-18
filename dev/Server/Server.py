@@ -138,6 +138,9 @@ def wait_for_clients():
                 last_join_time = time.time()
         except socket.timeout:
             break
+        except KeyboardInterrupt:
+            print(red_text("Connection interrupted by user, stopping server..."))
+            exit()
     global stop_udp_broadcast
     stop_udp_broadcast = True
 
@@ -294,7 +297,6 @@ def handle_answers(player, correct_answer):
     else:
         output = f"{client_name} time's up!"
         print(red_text(output))
-        send_tcp_message(output, 0x00, player.connection)
         disqualified_players.append(player)
         end_time = start_time + 10
 
