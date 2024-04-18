@@ -43,9 +43,8 @@ def game_welcome_message(server_name, subject):
 
 def round_details(round_number, active_players):
     if len(active_players) >= 1:
-        output = f"Round {round_number}, played by {active_players[0].user_name}"
-        for active_player in active_players[1:]:
-            output += f" and {active_player.user_name}"
+        user_names = ', '.join(player.user_name for player in active_players)
+        output = f"Round {round_number}, played by {user_names}"
         print(yellow_text(output))
 
 
@@ -123,17 +122,12 @@ def intersection_lists(active_players, active_connections):
 
 
 def print_table(player_responses, round_num):
-
     num_rounds = round_num - 1
-    num_players = len(player_responses)
     max_player_name_length = max(len(key) for key in player_responses.keys())
-
-    # Calculate the width of each cell
-    cell_width = 10  # Adjust this value based on your content width
+    cell_width = len("Round ") + len(str(num_rounds))
 
     # Print top border
-    print("┌", end="")
-    print("─" * (max_player_name_length + 2) + "┬", end="")
+    print("┌" + "─" * (max_player_name_length + 2) + "┬", end="")
     for _ in range(num_rounds - 1):
         print("─" * (cell_width + 2) + "┬", end="")
     print("─" * (cell_width + 2) + "┐")
@@ -145,27 +139,23 @@ def print_table(player_responses, round_num):
     print()
 
     # Print middle border
-    print("├", end="")
-    print("─" * (max_player_name_length + 2) + "┼", end="")
+    print("├" + "─" * (max_player_name_length + 2) + "┼", end="")
     for _ in range(num_rounds - 1):
         print("─" * (cell_width + 2) + "┼", end="")
     print("─" * (cell_width + 2) + "┤")
-
-
 
     # Print player rows
     for user_name, responses in player_responses.items():
         print(f"│ {user_name.ljust(max_player_name_length + 1)}", end="│")
         for i in range(num_rounds):
             if responses[i] is None or responses[i] == '':
-                print(f" {'Fail'.center(cell_width - 1)} ", end="│")
+                print(f" {'Fail'.center(cell_width)} ", end="│")
             else:
                 print(f" {responses[i].center(cell_width + 11)} ", end="│")
         print()
 
     # Print bottom border
-    print("└", end="")
-    print("─" * (max_player_name_length + 2) + "┴", end="")
+    print("└" + "─" * (max_player_name_length + 2) + "┴", end="")
     for _ in range(num_rounds - 1):
         print("─" * (cell_width + 2) + "┴", end="")
     print("─" * (cell_width + 2) + "┘")
