@@ -98,7 +98,7 @@ questions_and_answers = {
     "Vanilla is the world's most expensive spice.": False,
     "Vatican City is the smallest country in the world.": True,
     "Venezuela is home to the world's highest waterfall.": True,
-    "When exiting a cave, bats always go in the direction of the wind."
+    "When exiting a cave, bats always go in the direction of the wind.": False,
     "World-renowned jeweler Tiffany & Co. is the maker of the Vince Lombardi trophy.": True,
     "You can find the 'Desert of Death' in California.": False
 }
