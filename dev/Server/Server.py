@@ -46,7 +46,7 @@ def send_offer_broadcast():
 def send_tcp_message(msg, op_code, connection=None):
     if connection is not None:
         try:
-            connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
+            connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg.ljust(1023), 'utf-8'))
             return
         except BrokenPipeError:
             print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
@@ -54,7 +54,7 @@ def send_tcp_message(msg, op_code, connection=None):
     print(blue_text(msg))
     for p in active_connections:
         try:
-            p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
+            p.connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg.ljust(1023), 'utf-8'))
         except ConnectionResetError:
             print(f"Error occurred with connection from {p.client_address}")
             remove_player(p, active_connections)
