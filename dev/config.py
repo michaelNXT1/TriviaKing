@@ -1,4 +1,4 @@
-general = dict(
+general_consts = dict(
     buffer_size=1024
 )
 
@@ -96,19 +96,6 @@ def yellow_text(text):
 
 def pink_text(text):
     return "\033[95m" + text + "\033[0m"
-
-
-def check_player_name(player_name, active_players):
-    for active_player in active_players:
-        if active_player.user_name == player_name:
-            return True
-    return False
-
-
-def get_player_by_clinent_adrres(client_addres, active_players):
-    for active_player in active_players:
-        if active_player.client_address == client_addres:
-            return active_player
 
 
 def intersection_lists(active_players, active_connections):

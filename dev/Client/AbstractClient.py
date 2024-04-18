@@ -1,7 +1,7 @@
 import threading
 from abc import ABC, abstractmethod
 import socket
-from dev.config import client_consts, general, client_op_codes, server_op_codes, answer_keys, red_text, blue_text, \
+from dev.config import client_consts, general_consts, client_op_codes, server_op_codes, answer_keys, red_text, blue_text, \
     yellow_text, pink_text, green_text
 import random
 import uuid
@@ -31,7 +31,7 @@ class AbstractClient(ABC):
 
         # Receive UDP broadcast
         try:
-            data, addr = udp_socket.recvfrom(general['buffer_size'])
+            data, addr = udp_socket.recvfrom(general_consts['buffer_size'])
 
         except KeyboardInterrupt:
             print(red_text("program stop when wait for UDP connection"))
