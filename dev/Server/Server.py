@@ -123,13 +123,19 @@ def start_thread(target, is_daemon):
 
 
 def wait_for_clients():
-    start_thread(send_offer_broadcast, True)  # Start UDP broadcast thread
-    start_thread(monitor_connections, True)  # Start a thread to monitor active connections
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Create a TCP/IP socket
     # Bind the socket to the address and port
     server_address = ('', 12345)  # Example port, replace with your desired port
-    tcp_socket.bind(server_address)
+    while True:
+        try:
+            tcp_socket.bind(server_address)
+            break
+        except OSError:
+            print(red_text('Address still in use, sleeping for 5 seconds..'))
+            time.sleep(5)
     tcp_socket.listen(5)  # Listen for incoming connections
+    start_thread(send_offer_broadcast, True)  # Start UDP broadcast thread
+    start_thread(monitor_connections, True)  # Start a thread to monitor active connections
     print(yellow_text("Server started, listening on IP address 172.1.0.4"))
     last_join_time = time.time()
     while time.time() - last_join_time < 10:
@@ -160,6 +166,7 @@ def calculate_statistics():
 
 
 def send_game_over_message(winner):
+    global active_connections
     calculate_statistics()
     if winner in active_connections:
         active_connections.remove(winner)
@@ -171,8 +178,7 @@ def send_game_over_message(winner):
         print("Error: Connection reset by peer")
     winner_output = "Congratulations you won!"
     try:
-        winner.connection.sendall(server_op_codes['server_ends_game'].to_bytes(1, byteorder='big') +
-                                  bytes(winner_output, 'utf-8'))
+        send_tcp_message(winner_output, server_op_codes['server_ends_game'], winner.connection)
     except ConnectionResetError:
         print("Error: Connection reset by peer")
     except ConnectionAbortedError:
@@ -181,6 +187,10 @@ def send_game_over_message(winner):
         print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
         # TODO: Handle the broken connection, such as removing the player from active connections
 
+    for player in active_connections:
+        player.connection.close()
+
+    active_connections = []
     global game_on
     game_on = False
 
@@ -357,13 +367,18 @@ def print_fastest_player():
 
 
 def main():
-    wait_for_clients()
-    if len(active_connections) > 1:
-        run_game()
-    elif len(active_connections) == 0:
-        print(yellow_text("No one connected "))
-    else:
-        print(yellow_text("Just one connection "))
+    while True:
+        global stop_udp_broadcast
+        stop_udp_broadcast = False
+        wait_for_clients()
+        if len(active_connections) > 1:
+            run_game()
+        elif len(active_connections) == 0:
+            print(yellow_text("No one connected "))
+        else:
+            print(yellow_text("Just one connection "))
+        print(green_text("Next game will start in 5 seconds.."))
+        time.sleep(5)
 
 
 # TODO need to change after implementing the bot
