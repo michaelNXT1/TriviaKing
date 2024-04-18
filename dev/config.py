@@ -1,15 +1,22 @@
 general_consts = dict(
-    buffer_size=1024
+    buffer_size=1024,
+    server_port=13117
 )
 
 server_consts = dict(
-    server_port=13117,
+    server_port=general_consts['server_port'],
     magic_cookie=0xabcddcba,
-    message_type=0x02
+    message_type=0x02,
+    server_name_max_size=32,
+    monitor_connections_sleep_time=5,
+    next_connection_wait_time=10,
+    answer_wait_time=10,
+    next_game_start_time=5,
+    address_wait_time=5
 )
 
 client_consts = dict(
-    server_port=13117,
+    server_port=general_consts['server_port'],
     magic_cookie=0xabcddcba,
     message_type=0x02
 )
@@ -37,7 +44,7 @@ answer_keys = {
 }
 
 
-def game_welcome_message(server_name, subject):
+def welcome_message(server_name, subject):
     return f"Welcome to the {server_name} server, where we are answering trivia questions about {subject}."
 
 
@@ -136,7 +143,7 @@ def print_table(player_responses, round_num):
         print(f"│ {user_name.ljust(max_player_name_length + 1)}", end="│")
         for i in range(num_rounds):
             if responses[i] is None or responses[i] == '':
-                print(f" {'Fail'.center(cell_width)} ", end="│")
+                print(f" {'Drop'.center(cell_width)} ", end="│")
             else:
                 print(f" {responses[i].center(cell_width + 11)} ", end="│")
         print()
