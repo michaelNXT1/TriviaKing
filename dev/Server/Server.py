@@ -73,10 +73,12 @@ def handle_tcp_connection(connection, client_address):
         content = data[1:].decode()
         if check_player_name(content, active_connections):
             connection.sendall(server_op_codes['server_requests_other_name'].to_bytes(1, byteorder='big'))
+            return False
         else:
             print(yellow_text(f"Connection accepted from: {client_address}"))
             active_connections.append(Player(connection, client_address, content))
             connection.sendall(b"Your name has been submitted!")
+            return True
 
 
     except Exception as e:
@@ -132,8 +134,8 @@ def wait_for_clients():
         tcp_socket.settimeout(10)
         try:
             connection, client_address = tcp_socket.accept()  # Accept incoming connection
-            handle_tcp_connection(connection, client_address)
-            last_join_time = time.time()
+            if handle_tcp_connection(connection, client_address):
+                last_join_time = time.time()
         except socket.timeout:
             break
     global stop_udp_broadcast
@@ -201,7 +203,7 @@ def run_game():
         print("Error: Connection reset by peer")
     import random
     qa_list = list(QandA.questions_and_answers.keys())
-    # random.shuffle(qa_list)
+    # random.shuffle(qa_list) #TODO: disable comment when done
     question = qa_list[0]
 
     num_rounds = len(qa_list)
