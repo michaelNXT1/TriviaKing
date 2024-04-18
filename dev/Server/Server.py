@@ -49,8 +49,10 @@ def send_tcp_message(msg, op_code, connection=None):
             connection.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg.ljust(1023), 'utf-8'))
             return
         except BrokenPipeError:
-            print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
+            print(f"BrokenPipeError: Connection closed unexpectedly with {connection}")
+            remove_player_by_connection(connection, active_connections)
             # TODO: Handle the broken connection, such as removing the player from active connections
+            return
     print(blue_text(msg))
     for p in active_connections:
         try:
@@ -59,10 +61,10 @@ def send_tcp_message(msg, op_code, connection=None):
             print(f"Error occurred with connection from {p.client_address}")
             remove_player(p, active_connections)
         except ConnectionAbortedError:
-            print("Error occurred with connection from {}".format(p.client_address))
+            print(f"Error occurred with connection from {p.client_address}")
             remove_player(p, active_connections)
         except BrokenPipeError:
-            print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
+            print(f"BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
             # Handle the broken connection, such as removing the player from active connections
             remove_player(p, active_connections)
 
@@ -101,7 +103,7 @@ def monitor_connections():
         output = f"Number of active connections: {len(active_connections)}"
         send_tcp_message(output, server_op_codes['server_check_connection'])
         # Sleep for 5 seconds before checking again
-        time.sleep(5)
+        time.sleep(1)
         if game_on:
             return
 
@@ -190,8 +192,18 @@ def add_response_time(player, response_time):
 
 
 def remove_player(player, active_players):
-    if player in active_players:
-        active_players.remove(player)
+    new_active_players = []
+    for p in active_players:
+        if player.user_name != p.user_name:
+            new_active_players.append(p)
+    active_players[:] = new_active_players
+
+
+def remove_player_by_connection(connection, active_players):
+    for player in active_players:
+        if player.connection == connection:
+            active_players.remove(connection)
+            return
 
 
 def run_game():
@@ -213,7 +225,11 @@ def run_game():
     player_responses = {p.user_name: ['' for _ in range(num_rounds)] for p in active_players}
 
     while len(active_players) > 1:
+        send_tcp_message('', server_op_codes['server_check_connection'])
+        intersection_lists(active_players, active_connections)
+
         if len(active_players) == 0:
+            print(red_text("All the players are disconnected"))
             exit()
         round_details(round_number, active_players)
         client_threads = []
@@ -244,9 +260,6 @@ def run_game():
             else:
                 player_responses[user_name][round_number - 1] = red_text('x')
 
-        send_tcp_message('', server_op_codes['server_check_connection'])
-        intersection_lists(active_players, active_connections)
-
         for player in disqualified_players:
             remove_player(player, active_players)
             disqualified_players.remove(player)
@@ -259,7 +272,8 @@ def run_game():
         else:
             question = qa_list[round_number - 1]
 
-    send_game_over_message(active_players[0])
+    if len(active_players) >= 1:
+        send_game_over_message(active_players[0])
     print_table(player_responses, round_number)
 
 
@@ -267,18 +281,24 @@ def handle_answers(player, correct_answer):
     client_name = player.user_name
     start_time = time.time()
     answer_flag = False
-    output = ''
     while time.time() - start_time <= 10:  # Check if 10 seconds have elapsed
         try:
             player.connection.settimeout(10 - (time.time() - start_time))  # Set timeout for receiving data
             try:
                 data = player.connection.recv(1024)
                 received_answer = data[1:].decode()
+                if len(data) == 0:
+                    print(red_text(f"The player {client_name} disconnected unexpectedly from the server"))
+                    remove_player(player, active_connections)
+                    exit()
             except ConnectionAbortedError:
                 print("Error: Connection aborted by peer")
+                remove_player(player, active_connections)
                 exit()
             except ConnectionResetError:
                 print("Error: Connection aborted by peer")
+                remove_player(player, active_connections)
+                exit()
             answer_flag = True
             end_time = time.time()
             break  # Exit loop if data is received
@@ -286,6 +306,7 @@ def handle_answers(player, correct_answer):
             continue  # Continue looping if no data is received within timeout
 
     if answer_flag:
+        print(received_answer)
         if received_answer == str(correct_answer):
             output = f"{client_name} is correct!"
             print(green_text(f"{client_name} is correct!"))
@@ -325,18 +346,19 @@ def calculate_average_response_time(player):
 
 
 def print_fastest_player():
-    fastest_player = min(active_connections, key=lambda p: calculate_average_response_time(p))
-    if fastest_player:
-        fastest_player_name = fastest_player.user_name
-        fastest_avg_time = calculate_average_response_time(fastest_player)
-        return fastest_player_time(fastest_player_name, fastest_avg_time)
+    if len(active_connections) > 0:
+        fastest_player = min(active_connections, key=lambda p: calculate_average_response_time(p))
+        if fastest_player:
+            fastest_player_name = fastest_player.user_name
+            fastest_avg_time = calculate_average_response_time(fastest_player)
+            fastest_player_time(fastest_player_name, fastest_avg_time)
     else:
-        return None
+        print("All the players are disconnected")
 
 
 def main():
     wait_for_clients()
-    if len(active_connections) >= 1:
+    if len(active_connections) > 1:
         run_game()
     elif len(active_connections) == 0:
         print(yellow_text("No one connected "))

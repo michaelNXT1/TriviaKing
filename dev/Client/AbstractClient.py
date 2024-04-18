@@ -75,7 +75,7 @@ class AbstractClient(ABC):
                     if len(data) == 0:
                         print(red_text("Connection closed by remote host"))
                         break
-                    print(data)
+                    # print(data) #TODO: delete, for debugging only
                     if op_code == server_op_codes['server_sends_message']:
                         print(blue_text('Message from Server: ' + content))
                     elif op_code == server_op_codes['server_ends_game']:
@@ -102,7 +102,6 @@ class AbstractClient(ABC):
             finally:
                 # Close TCP connection
                 tcp_socket.close()
-                # check this
                 print(red_text("Server disconnected, listening for offer requests..."))
 
         # Close UDP socket
@@ -151,6 +150,9 @@ class Client(AbstractClient):
                     valid_answer = True
                     answer = answer_keys[user_input]
                     return answer
+        except KeyboardInterrupt:
+            print("program stop when wait to answer")
+            exit()
         except TimeoutOccurred:
             return None
         except Exception:
