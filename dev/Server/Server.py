@@ -3,6 +3,7 @@ import socket
 import threading
 import time
 import re
+import random
 
 from dev import QandA
 from dev.config import server_op_codes, general_consts, welcome_message, server_consts, round_details, \
@@ -123,12 +124,12 @@ class Server(object):
                 tcp_socket.bind(server_address)  # Bind the socket to the address and port
                 break
             except OSError:
-                self.synchronized_print(
-                    red_text(f'Address still in use, sleeping for {server_consts["address_wait_time"]} seconds..'))
-                time.sleep(server_consts["address_wait_time"])
+                self.server_port += 1
+                tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Create a TCP/IP socket
+                server_address = ('', self.server_port)  # Example port, replace with your desired port
         tcp_socket.listen(5)  # Listen for incoming connections
         threading.Thread(target=self.send_offer_broadcast, daemon=True).start()  # Start UDP broadcast thread
-        threading.Thread(target=self.monitor_connections, daemon=True).start()  # A thread to monitor active connections
+        # threading.Thread(target=self.monitor_connections, daemon=True).start()  # A thread to monitor active connections
         self.synchronized_print(
             yellow_text("Server started, listening on IP address " + socket.gethostbyname(socket.gethostname())))
         last_join_time = time.time()
@@ -234,7 +235,6 @@ class Server(object):
         round_number = 1
         active_players = copy.deepcopy(self.active_connections)
         self.send_tcp_message(welcome_message(self.server_name, QandA.subject), server_op_codes['server_sends_message'])
-        import random
         qa_list = list(QandA.questions_and_answers.keys())
         random.shuffle(qa_list)
         question = qa_list[0]
