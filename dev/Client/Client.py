@@ -37,10 +37,13 @@ class Client(AbstractClient):
 
 
 def main():
-    while True:
-        print('Client started, listening for offer requests...')
-        client = Client()
-        client.receive_offer_broadcast()
+    try:
+        while True:
+            print('Client started, listening for offer requests...')
+            client = Client()
+            client.receive_offer_broadcast()
+    except KeyboardInterrupt:
+        print(red_text("Process interrupted by user, exiting.."))
 
 
 if __name__ == "__main__":

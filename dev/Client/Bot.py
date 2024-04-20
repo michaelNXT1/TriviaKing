@@ -31,10 +31,13 @@ class Bot(AbstractClient):
 
 
 def main():
-    while True:
-        print(f'BOT started, answer success rate is {bot_consts["level"] * 10}%, listening for offer requests...')
-        bot = Bot(bot_consts['level'])
-        bot.receive_offer_broadcast()
+    try:
+        while True:
+            print(f'BOT started, answer success rate is {bot_consts["level"] * 10}%, listening for offer requests...')
+            bot = Bot(bot_consts['level'])
+            bot.receive_offer_broadcast()
+    except KeyboardInterrupt:
+        print(red_text("Process interrupted by user, exiting.."))
 
 
 if __name__ == "__main__":
