@@ -64,7 +64,7 @@ class AbstractClient(ABC):
                 while True:
                     # Receive response from server
                     try:
-                        data = tcp_socket.recv(1024)
+                        data = tcp_socket.recv(general_consts['buffer_size'])
                     except ConnectionResetError:
                         print(red_text("Connection reset by remote host. Reconnecting..."))
                         break
