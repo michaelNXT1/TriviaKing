@@ -6,7 +6,7 @@ import time
 from dev import QandA
 from dev.config import server_op_codes, general_consts, welcome_message, server_consts, round_details, \
     game_over_message, blue_text, green_text, red_text, yellow_text, fastest_player_time, avg_response_time, \
-    print_table, intersection_lists
+    print_table, intersection_lists, winner_message
 from dev.Server.Player import Player
 
 
@@ -204,26 +204,18 @@ class Server(object):
 
         self.print_fastest_player()
 
-    def send_game_over_message(self, winner):
+    def send_game_over_message(self, winners):
         self.calculate_statistics()
-        if winner in self.active_connections:
-            self.active_connections.remove(winner)
-        output = game_over_message(winner)
-        try:
-            self.send_tcp_message(output, server_op_codes['server_ends_game'])
-        except ConnectionResetError:
-            remove_player(winner.connection, self.active_connections)
-            print("Error: Connection reset by peer")
-        winner_output = "Congratulations you won!"
-        try:
+        # self.active_connections = [conn for conn in self.active_connections if conn not in winners]
+        connection_values = [p.connection for p in self.active_connections]
+        self.active_connections[:] = [p for p in self.active_connections if p.connection not in connection_values]
+        # if winners in self.active_connections:
+        #     self.active_connections.remove(winners)
+        output = game_over_message(winners)
+        self.send_tcp_message(output, server_op_codes['server_ends_game'])
+        winner_output = winner_message(winners)
+        for winner in winners:
             self.send_tcp_message(winner_output, server_op_codes['server_ends_game'], winner.connection)
-        except ConnectionResetError:
-            print("Error: Connection reset by peer")
-        except ConnectionAbortedError:
-            print("Error: Connection reset by peer")
-        except BrokenPipeError:
-            print("BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
-            # TODO: Handle the broken connection, such as removing the player from active connections
 
         for player in self.active_connections:
             player.connection.close()
@@ -281,12 +273,13 @@ class Server(object):
             # TODO check what happened when the questions end (end game)
             if round_number > len(qa_list):
                 print(blue_text("The players were very smart for the TriviaKing"))
+                self.send_game_over_message(active_players)
                 break
             else:
                 question = qa_list[round_number - 1]
 
         if len(active_players) >= 1:
-            self.send_game_over_message(active_players[0])
+            self.send_game_over_message([active_players[0]])
         print_table(player_responses, round_number)
 
     def run_server(self):

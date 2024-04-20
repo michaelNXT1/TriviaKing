@@ -56,7 +56,15 @@ def round_details(round_number, active_players):
 
 
 def game_over_message(winner_name):
-    return f"Game Over!\nCongratulations to the winner: {winner_name.user_name} \n"
+    if len(winner_name) == 1:
+        return f"Game Over!\nCongratulations to the winner: {winner_name[0].user_name}"
+    return f"It's a tie!\nCongratulations to the winners: {','.join([obj.user_name for obj in winner_name])}"
+
+
+def winner_message(winners):
+    if len(winners) == 1:
+        return f"Congratulations you won!"
+    return f"It's a tie!\nCongratulations to the winners: {','.join([obj.user_name for obj in winners])}"
 
 
 def game_winner():
