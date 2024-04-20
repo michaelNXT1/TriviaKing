@@ -1,11 +1,8 @@
 import threading
 from abc import ABC, abstractmethod
 import socket
-from dev.config import client_consts, general_consts, client_op_codes, server_op_codes, answer_keys, red_text, blue_text, \
-    yellow_text, pink_text, green_text
-import random
-import uuid
-from inputimeout import inputimeout, TimeoutOccurred
+from dev.config import client_consts, general_consts, client_op_codes, server_op_codes, red_text, \
+    blue_text, pink_text, green_text
 
 
 class AbstractClient(ABC):
@@ -16,11 +13,11 @@ class AbstractClient(ABC):
         sock.sendall(op_code.to_bytes(1, byteorder='big') + bytes(msg, 'utf-8'))
 
     @abstractmethod
-    def getName(self):
+    def get_name(self):
         pass
 
     @abstractmethod
-    def getAnswer(self):
+    def get_answer(self, question):
         pass
 
     def receive_offer_broadcast(self):
@@ -48,7 +45,7 @@ class AbstractClient(ABC):
             print(
                 blue_text(f'Received offer from server “{server_name}” at address {addr[0]}, attempting to connect...'))
 
-            user_name = self.getName()
+            user_name = self.get_name()
             # Establish TCP connection
             try:
                 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -71,7 +68,7 @@ class AbstractClient(ABC):
                     except KeyboardInterrupt:
                         break
                     op_code = int.from_bytes(data[:1], byteorder='big')
-                    content = data[1:].decode()
+                    content = data[1:].decode().rstrip()
                     if len(data) == 0:
                         print(red_text("Connection closed by remote host"))
                         break
@@ -85,7 +82,7 @@ class AbstractClient(ABC):
                         threading.Thread(target=self.return_answer, args=(content, tcp_socket)).start()
                     elif op_code == server_op_codes['server_requests_other_name']:
                         print(red_text("Your name is in use by someone else, please try again"))
-                        user_name = self.getName()
+                        user_name = self.get_name()
                         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         tcp_socket.connect((addr[0], server_port))
                         self.send_message(tcp_socket, user_name, client_op_codes['client_sends_name'])
@@ -109,51 +106,7 @@ class AbstractClient(ABC):
 
     def return_answer(self, content, tcp_socket):
         print(pink_text('Question from Server: ' + content))
-        answer = self.getAnswer()
+        answer = self.get_answer(content)
         if answer is not None:
             self.send_message(tcp_socket, answer, client_op_codes['client_sends_answer'])
 
-
-class Bot(AbstractClient):
-    def getName(self):
-        new_uuid = uuid.uuid4()
-        # Convert UUID to a hexadecimal string
-        hex_string = new_uuid.hex
-        # Convert hexadecimal string to integer
-        uuid_as_number = int(hex_string, 16)
-        user_name = f"BOT{uuid_as_number}"
-        print(yellow_text(f"Bot name: {user_name}"))
-        return user_name
-
-    def getAnswer(self):
-        options = ['0', '1']
-        random_answer = random.choice(options)
-        print('Bot generated random answer: ' + str(answer_keys[random_answer]))
-        return answer_keys[random_answer]
-
-
-class Client(AbstractClient):
-    def getName(self):
-        try:
-            user_name = input(yellow_text("Please enter your name: "))
-            return user_name
-        except KeyboardInterrupt:
-            print(red_text("\nProgram stop when wait to name"))
-            exit()
-
-    def getAnswer(self):
-        try:
-            valid_answer = False
-            while not valid_answer:
-                user_input = inputimeout(prompt='please enter your answer: ', timeout=10).upper()  # TODO: use constant
-                if user_input in answer_keys.keys():
-                    valid_answer = True
-                    answer = answer_keys[user_input]
-                    return answer
-        except KeyboardInterrupt:
-            print("program stop when wait to answer")
-            exit()
-        except TimeoutOccurred:
-            return None
-        except Exception:
-            return None

@@ -21,6 +21,10 @@ client_consts = dict(
     message_type=0x02
 )
 
+bot_consts = dict(
+    level=9
+)
+
 client_op_codes = dict(
     client_sends_name=0x00,
     client_sends_answer=0x01

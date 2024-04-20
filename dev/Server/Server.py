@@ -72,6 +72,7 @@ class Server(object):
     def handle_tcp_connection(self, connection, client_address):
         try:
             data = connection.recv(general_consts['buffer_size'])
+            op_code = data[:1]
             given_username = data[1:].decode()
             if any(p.user_name == given_username for p in self.active_connections):
                 self.send_tcp_message('', server_op_codes['server_requests_other_name'], connection)
@@ -217,7 +218,8 @@ class Server(object):
                 print(red_text("All the players are disconnected"))
                 break
             round_details(round_number, active_players)
-            [self.send_tcp_message(question, server_op_codes['server_requests_input'], p.connection) for p in active_players]
+            [self.send_tcp_message(question, server_op_codes['server_requests_input'], p.connection) for p in
+             active_players]
             answer = QandA.questions_and_answers[question]
             client_threads = [threading.Thread(target=self.handle_answers, args=(p, answer)) for p in active_players]
             [thread.start() for thread in client_threads]
@@ -255,11 +257,10 @@ class Server(object):
             if len(self.active_connections) > 1:
                 self.run_game()
             elif len(self.active_connections) == 0:
-                print(yellow_text("No one connected"))
+                print(yellow_text("No one connected."))
             else:
                 print(yellow_text("Just one connection"))
-                self.send_tcp_message('Sorry, no additional players found.', server_op_codes['server_ends_game'],
-                                      self.active_connections[0].connection)
+                self.send_tcp_message('Sorry, no additional players found.', server_op_codes['server_ends_game'])
                 self.active_connections = []
             print(green_text(f"Next game will start in {server_consts['next_game_start_time']} seconds.."))
             time.sleep(server_consts['next_game_start_time'])
