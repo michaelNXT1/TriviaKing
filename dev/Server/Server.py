@@ -2,11 +2,12 @@ import copy
 import socket
 import threading
 import time
+import re
 
 from dev import QandA
 from dev.config import server_op_codes, general_consts, welcome_message, server_consts, round_details, \
     game_over_message, blue_text, green_text, red_text, yellow_text, fastest_player_time, avg_response_time, \
-    print_table, intersection_lists, winner_message
+    print_table, intersection_lists, winner_message, client_op_codes
 from dev.Server.Player import Player
 
 
@@ -28,6 +29,9 @@ class Server(object):
         self.game_on = False
         self.server_port = 12345  # Define server port
         self.stop_udp_broadcast = False
+        self.num_bots = 0
+        self.num_bots_lock = threading.Lock()
+        self.print_lock = threading.Lock()
 
     def send_offer_broadcast(self):
 
@@ -72,16 +76,34 @@ class Server(object):
     def handle_tcp_connection(self, connection, client_address):
         try:
             data = connection.recv(general_consts['buffer_size'])
-            op_code = data[:1]
-            given_username = data[1:].decode()
-            if any(p.user_name == given_username for p in self.active_connections):
+            op_code = int.from_bytes(data[:1], byteorder='big')
+            if op_code == client_op_codes['client_message']:
+                given_username = data[1:].decode()
+                if any(p.user_name == given_username for p in self.active_connections):
+                    self.send_tcp_message('', server_op_codes['server_requests_other_name'], connection)
+                    return False
+                elif re.match(r'\bBot #\d+\b', given_username):
+                    self.send_tcp_message('', server_op_codes['server_requests_other_name'], connection)
+                    return False
+                else:
+                    print(yellow_text(f"Connection accepted from: {client_address}, named {given_username}"))
+                    self.active_connections.append(Player(connection, client_address, given_username))
+                    self.send_tcp_message('Successfully connected!', server_op_codes['server_sends_message'],
+                                          connection)
+                    return True
+            elif op_code == client_op_codes['bot_message']:
+                with self.num_bots_lock:
+                    self.num_bots += 1
+                    given_username = 'Bot #' + str(self.num_bots)
+                    print(yellow_text(f"Connection accepted from: {client_address}, named {given_username}"))
+                    self.active_connections.append(Player(connection, client_address, given_username))
+                    self.send_tcp_message(given_username, server_op_codes['server_accepts_bot'],
+                                          connection)
+                    return True
+            else:
                 self.send_tcp_message('', server_op_codes['server_requests_other_name'], connection)
                 return False
-            else:
-                print(yellow_text(f"Connection accepted from: {client_address}, named {given_username}"))
-                self.active_connections.append(Player(connection, client_address, given_username))
-                self.send_tcp_message('Successfully connected!', server_op_codes['server_sends_message'], connection)
-                return True
+
 
         except Exception as e:
             print(f"Error occurred with connection from {client_address}: {e}")

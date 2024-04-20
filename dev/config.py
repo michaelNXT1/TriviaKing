@@ -26,8 +26,8 @@ bot_consts = dict(
 )
 
 client_op_codes = dict(
-    client_sends_name=0x00,
-    client_sends_answer=0x01
+    client_message=0x00,
+    bot_message=0x01
 )
 
 server_op_codes = dict(
@@ -35,7 +35,8 @@ server_op_codes = dict(
     server_requests_input=0x01,
     server_ends_game=0x02,
     server_requests_other_name=0x03,
-    server_check_connection=0x04
+    server_check_connection=0x04,
+    server_accepts_bot=0x05
 )
 
 answer_keys = {

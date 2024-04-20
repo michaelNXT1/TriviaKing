@@ -5,6 +5,12 @@ from dev.config import answer_keys, yellow_text, red_text
 
 
 class Client(AbstractClient):
+    def is_bot(self):
+        return False
+
+    def accept_bot_name(self, content):
+        pass
+
     def get_name(self):
         try:
             user_name = input(yellow_text("Please enter your name: "))

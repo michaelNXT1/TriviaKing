@@ -11,15 +11,14 @@ class Bot(AbstractClient):
     def __init__(self, level=5):
         self.level = level
 
+    def is_bot(self):
+        return True
+
+    def accept_bot_name(self, content):
+        print(yellow_text(f"Bot name: {content}"))
+
     def get_name(self):
-        new_uuid = uuid.uuid4()
-        # Convert UUID to a hexadecimal string
-        hex_string = new_uuid.hex
-        # Convert hexadecimal string to integer
-        uuid_as_number = int(hex_string, 16)
-        user_name = f"BOT{uuid_as_number}"
-        print(yellow_text(f"Bot name: {user_name}"))
-        return user_name
+        return ''
 
     def get_answer(self, question):
         rand = 'hello'
