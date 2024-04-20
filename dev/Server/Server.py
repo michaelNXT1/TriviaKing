@@ -122,9 +122,6 @@ class Server(object):
                     last_join_time = time.time()
             except socket.timeout:
                 break
-            except KeyboardInterrupt:
-                print(red_text("Connection interrupted by user, stopping server..."))
-                exit()
         self.stop_udp_broadcast = True
         self.game_on = True
 
@@ -299,7 +296,10 @@ class Server(object):
 
 
 def main():
-    Server().run_server()
+    try:
+        Server().run_server()
+    except KeyboardInterrupt:
+        print(red_text("Process interrupted by user, exiting.."))
 
 
 if __name__ == "__main__":
