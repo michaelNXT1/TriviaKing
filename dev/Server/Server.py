@@ -33,6 +33,10 @@ class Server(object):
         self.num_bots_lock = threading.Lock()
         self.print_lock = threading.Lock()
 
+    def synchronized_print(self, msg):
+        with self.print_lock:
+            print(msg)
+
     def send_offer_broadcast(self):
 
         # Ensure server name is 32 characters long
@@ -52,7 +56,7 @@ class Server(object):
             udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             udp_socket.sendto(packet, ('<broadcast>', 13117))
             time.sleep(1)
-        print('Terminating UDP broadcast.')
+        self.synchronized_print('Terminating UDP broadcast.')
         udp_socket.close()
 
     def send_tcp_message(self, msg, op_code, connection=None):
@@ -60,10 +64,10 @@ class Server(object):
             try:
                 connection.sendall(op_code.to_bytes(1) + bytes(msg.ljust(general_consts['buffer_size'] - 1), 'utf-8'))
             except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                print(f"Error occurred with connection from {connection}")
+                self.synchronized_print(f"Error occurred with connection from {connection}")
                 remove_player(connection, self.active_connections)
         else:
-            print(blue_text(msg))
+            self.synchronized_print(blue_text(msg))
             for p in self.active_connections:
                 self.send_tcp_message(msg, op_code, p.connection)
 
@@ -86,7 +90,8 @@ class Server(object):
                     self.send_tcp_message('', server_op_codes['server_requests_other_name'], connection)
                     return False
                 else:
-                    print(yellow_text(f"Connection accepted from: {client_address}, named {given_username}"))
+                    self.synchronized_print(
+                        yellow_text(f"Connection accepted from: {client_address}, named {given_username}"))
                     self.active_connections.append(Player(connection, client_address, given_username))
                     self.send_tcp_message('Successfully connected!', server_op_codes['server_sends_message'],
                                           connection)
@@ -95,7 +100,8 @@ class Server(object):
                 with self.num_bots_lock:
                     self.num_bots += 1
                     given_username = 'Bot #' + str(self.num_bots)
-                    print(yellow_text(f"Connection accepted from: {client_address}, named {given_username}"))
+                    self.synchronized_print(
+                        yellow_text(f"Connection accepted from: {client_address}, named {given_username}"))
                     self.active_connections.append(Player(connection, client_address, given_username))
                     self.send_tcp_message(given_username, server_op_codes['server_accepts_bot'],
                                           connection)
@@ -104,9 +110,8 @@ class Server(object):
                 self.send_tcp_message('', server_op_codes['server_requests_other_name'], connection)
                 return False
 
-
         except Exception as e:
-            print(f"Error occurred with connection from {client_address}: {e}")
+            self.synchronized_print(f"Error occurred with connection from {client_address}: {e}")
             remove_player(connection, self.active_connections)
             exit()  # TODO: seems like a dangerous command, doesn't it exit the server entirely?
 
@@ -118,12 +123,14 @@ class Server(object):
                 tcp_socket.bind(server_address)  # Bind the socket to the address and port
                 break
             except OSError:
-                print(red_text(f'Address still in use, sleeping for {server_consts["address_wait_time"]} seconds..'))
+                self.synchronized_print(
+                    red_text(f'Address still in use, sleeping for {server_consts["address_wait_time"]} seconds..'))
                 time.sleep(server_consts["address_wait_time"])
         tcp_socket.listen(5)  # Listen for incoming connections
         threading.Thread(target=self.send_offer_broadcast, daemon=True).start()  # Start UDP broadcast thread
         threading.Thread(target=self.monitor_connections, daemon=True).start()  # A thread to monitor active connections
-        print(yellow_text("Server started, listening on IP address " + socket.gethostbyname(socket.gethostname())))
+        self.synchronized_print(
+            yellow_text("Server started, listening on IP address " + socket.gethostbyname(socket.gethostname())))
         last_join_time = time.time()
         while time.time() - last_join_time < server_consts['next_connection_wait_time']:
             tcp_socket.settimeout(server_consts['next_connection_wait_time'])
@@ -155,11 +162,12 @@ class Server(object):
                     data = player.connection.recv(general_consts['buffer_size'])
                     received_answer = data[1:].decode()
                     if len(data) == 0:
-                        print(red_text(f"The player {client_name} disconnected unexpectedly from the server"))
+                        self.synchronized_print(
+                            red_text(f"The player {client_name} disconnected unexpectedly from the server"))
                         remove_player(player.connection, self.active_connections)
                         exit()
                 except (ConnectionAbortedError, ConnectionResetError):
-                    print("Error: Connection aborted by peer.")
+                    self.synchronized_print("Error: Connection aborted by peer.")
                     remove_player(player.connection, self.active_connections)
                     exit()
                 answered = True
@@ -171,14 +179,14 @@ class Server(object):
         if answered:
             if received_answer == str(correct_answer):
                 output = f"{client_name} is correct!"
-                print(green_text(output))
+                self.synchronized_print(green_text(output))
             else:
                 output = f"{client_name} is incorrect!"
-                print(red_text(output))
+                self.synchronized_print(red_text(output))
                 self.disqualified_players.append(player)
         else:
             output = f"{client_name}'s time is up!"
-            print(red_text(output))
+            self.synchronized_print(red_text(output))
             self.disqualified_players.append(player)
             end_time = start_time + 10
 
@@ -195,10 +203,10 @@ class Server(object):
             if fastest_player:
                 fastest_player_time(fastest_player.user_name, calculate_average_response_time(fastest_player))
         else:
-            print("All the players are disconnected")
+            self.synchronized_print("All the players are disconnected")
 
     def calculate_statistics(self):
-        print(yellow_text("Calculating statistics..."))
+        self.synchronized_print(yellow_text("Calculating statistics..."))
         for player in self.active_connections:
             avg_time_msg = avg_response_time(calculate_average_response_time(player))
             self.send_tcp_message(avg_time_msg, server_op_codes['server_sends_message'], player.connection)
@@ -237,7 +245,7 @@ class Server(object):
             intersection_lists(active_players, self.active_connections)
 
             if len(active_players) == 0:
-                print(red_text("All the players are disconnected"))
+                self.synchronized_print(red_text("All the players are disconnected"))
                 break
             round_details(round_number, active_players)
             [self.send_tcp_message(question, server_op_codes['server_requests_input'], p.connection) for p in
@@ -262,7 +270,7 @@ class Server(object):
             self.disqualified_players = []
             round_number += 1
             if round_number > len(qa_list):
-                print(blue_text("The players were very smart for the TriviaKing"))
+                self.synchronized_print(blue_text("The players were very smart for the TriviaKing"))
                 self.send_game_over_message(active_players)
                 break
             else:
@@ -279,12 +287,13 @@ class Server(object):
             if len(self.active_connections) > 1:
                 self.run_game()
             elif len(self.active_connections) == 0:
-                print(yellow_text("No one connected."))
+                self.synchronized_print(yellow_text("No one connected."))
             else:
-                print(yellow_text("Just one connection"))
+                self.synchronized_print(yellow_text("Just one connection"))
                 self.send_tcp_message('Sorry, no additional players found.', server_op_codes['server_ends_game'])
                 self.active_connections = []
-            print(green_text(f"Next game will start in {server_consts['next_game_start_time']} seconds.."))
+            self.synchronized_print(
+                green_text(f"Next game will start in {server_consts['next_game_start_time']} seconds.."))
             time.sleep(server_consts['next_game_start_time'])
 
 

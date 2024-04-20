@@ -56,7 +56,10 @@ def welcome_message(server_name, subject):
 def round_details(round_number, active_players):
     if len(active_players) >= 1:
         user_names = ', '.join(player.user_name for player in active_players)
-        output = f"Round {round_number}, played by {user_names}"
+        last_comma_index = user_names.rfind(',')
+        if last_comma_index != -1:
+            user_names = user_names[:last_comma_index] + ' and' + user_names[last_comma_index + 1:]
+        output = f"Round {round_number}, played by {user_names}:"
         print(yellow_text(output))
 
 
