@@ -6,7 +6,14 @@ from dev.config import client_consts, general_consts, client_op_codes, server_op
 
 
 class AbstractClient(ABC):
-    def send_message(self, sock, msg, op_code=0x00):
+    def is_bot(self):
+        pass
+
+    def accept_bot_name(self, content):
+        pass
+
+    def send_message(self, sock, msg):
+        op_code = client_op_codes['bot_message'] if self.is_bot() else client_op_codes['client_message']
         if not isinstance(msg, str):
             msg = str(msg)
             # Encode the string message and send it
@@ -56,8 +63,7 @@ class AbstractClient(ABC):
 
             try:
                 # Send success message over TCP
-                self.send_message(tcp_socket, user_name, client_op_codes['client_sends_name'])
-                # Continuously prompt user for input until "QUIT" is entered
+                self.send_message(tcp_socket, user_name)
                 while True:
                     # Receive response from server
                     try:
@@ -72,7 +78,6 @@ class AbstractClient(ABC):
                     if len(data) == 0:
                         print(red_text("Connection closed by remote host"))
                         break
-                    # print(data) #TODO: delete, for debugging only
                     if op_code == server_op_codes['server_sends_message']:
                         print(blue_text('Message from Server: ' + content))
                     elif op_code == server_op_codes['server_ends_game']:
@@ -85,11 +90,11 @@ class AbstractClient(ABC):
                         user_name = self.get_name()
                         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         tcp_socket.connect((addr[0], server_port))
-                        self.send_message(tcp_socket, user_name, client_op_codes['client_sends_name'])
+                        self.send_message(tcp_socket, user_name)
                     elif op_code == server_op_codes['server_check_connection']:
                         continue
-                    # elif op_code == server_op_codes['']:
-                    #     continue
+                    elif op_code == server_op_codes['server_accepts_bot']:
+                        self.accept_bot_name(content)
                     else:
                         print(green_text('successfully connected'))
 
@@ -108,5 +113,5 @@ class AbstractClient(ABC):
         print(pink_text('Question from Server: ' + content))
         answer = self.get_answer(content)
         if answer is not None:
-            self.send_message(tcp_socket, answer, client_op_codes['client_sends_answer'])
+            self.send_message(tcp_socket, answer)
 
