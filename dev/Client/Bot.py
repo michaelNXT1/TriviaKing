@@ -1,9 +1,8 @@
-import uuid
 import random
 
 from AbstractClient import AbstractClient
 from dev import QandA
-from dev.config import yellow_text, answer_keys, bot_consts
+from dev.config import yellow_text, answer_keys, bot_consts, red_text
 
 
 class Bot(AbstractClient):
@@ -21,7 +20,6 @@ class Bot(AbstractClient):
         return ''
 
     def get_answer(self, question):
-        rand = 'hello'
         print(question)
         answer = QandA.questions_and_answers[question]
         if random.random() > self.level / 10:

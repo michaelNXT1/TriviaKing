@@ -114,4 +114,3 @@ class AbstractClient(ABC):
         answer = self.get_answer(content)
         if answer is not None:
             self.send_message(tcp_socket, answer)
-

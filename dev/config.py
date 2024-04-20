@@ -91,9 +91,9 @@ def player_times_up(player_name):
     return f"{player_name} times up!"
 
 
-def fastest_player_time(player_name, avg_response_time):
+def fastest_player_time(player_name, avg_resp_time):
     print(blue_text(
-        f"Fastest Player in TriviaKing: {player_name} with Average Response Time: {avg_response_time} seconds"))
+        f"Fastest Player in TriviaKing: {player_name} with Average Response Time: {avg_resp_time} seconds"))
 
 
 def avg_response_time(avg_time):
