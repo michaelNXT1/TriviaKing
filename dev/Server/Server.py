@@ -55,31 +55,19 @@ class Server(object):
         if connection is not None:
             try:
                 connection.sendall(op_code.to_bytes(1) + bytes(msg.ljust(general_consts['buffer_size'] - 1), 'utf-8'))
-                return
-            except BrokenPipeError:
-                print(f"BrokenPipeError: Connection closed unexpectedly with {connection}")
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                print(f"Error occurred with connection from {connection}")
                 remove_player(connection, self.active_connections)
-                return
-        print(blue_text(msg))
-        for p in self.active_connections:
-            try:
-                p.connection.sendall(op_code.to_bytes(1) + bytes(msg.ljust(general_consts['buffer_size'] - 1), 'utf-8'))
-            except (ConnectionResetError, ConnectionAbortedError):
-                print(f"Error occurred with connection from {p.client_address}")
-                remove_player(p.connection, self.active_connections)
-            except BrokenPipeError:
-                print(f"BrokenPipeError: Connection closed unexpectedly with {p.client_address}")
-                remove_player(p.connection, self.active_connections)
+        else:
+            print(blue_text(msg))
+            for p in self.active_connections:
+                self.send_tcp_message(msg, op_code, p.connection)
 
     def monitor_connections(self):
-        while True:
-            # Print the number of active connections
+        while not self.game_on:
             output = f"Number of active connections: {len(self.active_connections)}"
-            # Check that active connections are stable
             self.send_tcp_message(output, server_op_codes['server_check_connection'])
             time.sleep(server_consts['monitor_connections_sleep_time'])  # Sleep for 5 seconds before checking again
-            if self.game_on:
-                return
 
     def handle_tcp_connection(self, connection, client_address):
         try:
@@ -173,14 +161,10 @@ class Server(object):
 
         self.add_response_time(player, end_time - start_time)
 
-        try:
-            if player.connection is None:
-                remove_player(player.connection, self.active_connections)
-            else:
-                self.send_tcp_message(output, server_op_codes['server_sends_message'], connection=player.connection)
-        except ConnectionResetError:
-            print("Error: Connection reset by peer")
+        if player.connection is None:
             remove_player(player.connection, self.active_connections)
+        else:
+            self.send_tcp_message(output, server_op_codes['server_sends_message'], connection=player.connection)
 
     def print_fastest_player(self):
         if len(self.active_connections) > 0:
@@ -194,20 +178,14 @@ class Server(object):
         print(yellow_text("Calculating statistics..."))
         for player in self.active_connections:
             avg_time_msg = avg_response_time(calculate_average_response_time(player))
-            try:
-                self.send_tcp_message(avg_time_msg, server_op_codes['server_sends_message'], player.connection)
-            except ConnectionResetError:
-                print("Error: Connection reset by peer")
+            self.send_tcp_message(avg_time_msg, server_op_codes['server_sends_message'], player.connection)
 
         self.print_fastest_player()
 
     def send_game_over_message(self, winners):
         self.calculate_statistics()
-        # self.active_connections = [conn for conn in self.active_connections if conn not in winners]
         connection_values = [p.connection for p in self.active_connections]
         self.active_connections[:] = [p for p in self.active_connections if p.connection not in connection_values]
-        # if winners in self.active_connections:
-        #     self.active_connections.remove(winners)
         output = game_over_message(winners)
         self.send_tcp_message(output, server_op_codes['server_ends_game'])
         winner_output = winner_message(winners)
@@ -224,11 +202,7 @@ class Server(object):
         self.game_on = True
         round_number = 1
         active_players = copy.deepcopy(self.active_connections)
-        try:
-            self.send_tcp_message(welcome_message(self.server_name, QandA.subject),
-                                  server_op_codes['server_sends_message'])
-        except ConnectionResetError:
-            print("Error: Connection reset by peer")
+        self.send_tcp_message(welcome_message(self.server_name, QandA.subject), server_op_codes['server_sends_message'])
         import random
         qa_list = list(QandA.questions_and_answers.keys())
         random.shuffle(qa_list)
@@ -241,13 +215,9 @@ class Server(object):
 
             if len(active_players) == 0:
                 print(red_text("All the players are disconnected"))
-                exit()
+                break
             round_details(round_number, active_players)
-            try:
-                for player in active_players:
-                    self.send_tcp_message(question, server_op_codes['server_requests_input'], player.connection)
-            except ConnectionResetError:
-                print("Error: Connection reset by peer")
+            [self.send_tcp_message(question, server_op_codes['server_requests_input'], p.connection) for p in active_players]
             answer = QandA.questions_and_answers[question]
             client_threads = [threading.Thread(target=self.handle_answers, args=(p, answer)) for p in active_players]
             [thread.start() for thread in client_threads]
@@ -267,7 +237,6 @@ class Server(object):
             active_players = [p for p in active_players if p not in self.disqualified_players]
             self.disqualified_players = []
             round_number += 1
-            # TODO check what happened when the questions end (end game)
             if round_number > len(qa_list):
                 print(blue_text("The players were very smart for the TriviaKing"))
                 self.send_game_over_message(active_players)
@@ -289,7 +258,8 @@ class Server(object):
                 print(yellow_text("No one connected"))
             else:
                 print(yellow_text("Just one connection"))
-                self.send_tcp_message('Sorry, no additional players found.', server_op_codes['server_ends_game'], self.active_connections[0].connection)
+                self.send_tcp_message('Sorry, no additional players found.', server_op_codes['server_ends_game'],
+                                      self.active_connections[0].connection)
                 self.active_connections = []
             print(green_text(f"Next game will start in {server_consts['next_game_start_time']} seconds.."))
             time.sleep(server_consts['next_game_start_time'])
